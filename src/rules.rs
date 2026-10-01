@@ -301,7 +301,7 @@ impl Run {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::table::NINE;
+    use crate::table::EIGHT;
     use glam::{vec2, vec3};
 
     use crate::table::{HALF_LONG, HALF_WIDE};
@@ -325,7 +325,7 @@ mod tests {
             if balls.contains(&ball) {
                 continue;
             }
-            if ball == NINE {
+            if ball == EIGHT {
                 // parked in a corner, out of every shot these tests take.
                 // Taking the nine down ends the run, and a run that is over
                 // cannot be shot.
@@ -472,12 +472,12 @@ mod tests {
 
     #[test]
     fn an_empty_table_ends_it() {
-        let mut run = only(&[9]);
+        let mut run = only(&[BALLS]);
         // the last ball in the jaws, the cue ball behind it
-        run.bodies[9].position = vec3(HALF_LONG - 3.0, table::BALL_RADIUS, HALF_WIDE - 3.0);
+        run.bodies[BALLS].position = vec3(HALF_LONG - 3.0, table::BALL_RADIUS, HALF_WIDE - 3.0);
         run.bodies[CUE].position = vec3(HALF_LONG - 7.0, table::BALL_RADIUS, HALF_WIDE - 7.0);
         run.in_hand = false;
-        for ball in 1..NINE {
+        for ball in 1..BALLS {
             run.down[ball] = true;
         }
 

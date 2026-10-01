@@ -1,10 +1,13 @@
 # diamond
 
-Nine balls in a diamond, and a cue ball to break them with. The tenth game on
+Fifteen balls in a triangle, and a cue ball to break them with. The tenth game on
 `blitzkit`. The dependency is the published crate, overridden by the engine
 checkout at `../blitzkit` when built inside this project folder.
 
-Nine ball's rack is a diamond, and so are the sights on the rails you aim off.
+The rack is a triangle with the eight buried in the middle. The name is the
+sights on the rails, the diamonds you aim off, which outlive any one rack: this
+started as nine ball and its diamond of nine before Jake said he meant the
+triangle.
 
 ## Build and test
 

@@ -1,4 +1,4 @@
-//! Nine balls in a diamond, and a cue ball to break them with. See `specs/`.
+//! Fifteen balls in a triangle, and a cue ball to break them with. See `specs/`.
 
 mod diamond_game;
 mod rules;

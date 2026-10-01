@@ -42,7 +42,11 @@ const POCKET: Vec4 = vec4(0.03, 0.04, 0.05, 1.0);
 const CUE_BALL: Vec4 = vec4(0.97, 0.96, 0.92, 1.0);
 const AIM: Vec4 = vec4(1.0, 0.95, 0.75, 1.0);
 
-/// What each numbered ball is painted, one through nine.
+/// What each numbered ball is painted, one through fifteen.
+///
+/// Seven hues, the eight in black, and the same seven again paler for the
+/// stripes. The engine can texture a sphere, which is how marble wears its
+/// checker, so real stripes are a change this can take later.
 const PAINT: [Vec4; BALLS] = [
     vec4(0.95, 0.80, 0.15, 1.0),
     vec4(0.15, 0.32, 0.80, 1.0),
@@ -52,7 +56,13 @@ const PAINT: [Vec4; BALLS] = [
     vec4(0.12, 0.58, 0.32, 1.0),
     vec4(0.52, 0.14, 0.16, 1.0),
     vec4(0.08, 0.08, 0.10, 1.0),
-    vec4(0.95, 0.90, 0.55, 1.0),
+    vec4(0.99, 0.92, 0.62, 1.0),
+    vec4(0.62, 0.72, 0.95, 1.0),
+    vec4(0.95, 0.63, 0.62, 1.0),
+    vec4(0.78, 0.65, 0.88, 1.0),
+    vec4(0.99, 0.78, 0.58, 1.0),
+    vec4(0.62, 0.86, 0.70, 1.0),
+    vec4(0.84, 0.60, 0.61, 1.0),
 ];
 
 pub struct DiamondGame {

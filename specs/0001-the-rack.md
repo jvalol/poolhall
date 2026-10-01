@@ -5,8 +5,8 @@
 
 ## Goal
 
-Nine balls in a diamond, and a cue ball you hit them with. Pot them all, and the
-shot that matters is rarely the one you are taking: it is where the cue ball
+Fifteen balls in a triangle, and a cue ball you hit them with. Pot them all, and
+the shot that matters is rarely the one you are taking: it is where the cue ball
 stops for the next one.
 
 The tenth game on blitzkit, and the first where the player is aiming at the ball
@@ -30,15 +30,19 @@ same place. With it, every shot has a second half.
 
 ## Behavior
 
-**Nine balls, one through nine**, racked in a diamond with the one at the apex on
-the foot spot and the nine in the middle. The others go where they fall; a real
-rack randomises them and so does this.
+**Fifteen balls, one through fifteen**, racked in a triangle with the one at the
+apex on the foot spot and the eight buried in the middle of the third row. The
+others go where they fall; a real rack randomises them and so does this.
+
+This spec had nine in a diamond, which is nine ball's rack. Jake meant the
+triangle, which is every other game played on a pool table and the one anybody
+pictures.
 
 **There is no order.** Hit any ball first and pot any ball, and the run ends when
 the table is clear.
 
 This spec had nine ball's ordering rule, lowest ball first with the nine winning
-whenever it dropped, and Jake took it out. What is left is nine balls and as few
+whenever it dropped, and Jake took it out. What is left is fifteen balls and as few
 shots as you can manage, which is the same game of position without a rule to
 read. The wrong ball foul went with it.
 
@@ -140,8 +144,8 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 
 ## Acceptance criteria
 
-- The rack is nine balls in a diamond, inside the table and clear of each other. — `table::tests::the_rack_is_a_diamond`
-- The one is at the apex and the nine in the middle. — `table::tests::the_one_leads_and_the_nine_is_buried`
+- The rack is fifteen balls in a triangle, inside the table and clear of each other. — `table::tests::the_rack_is_a_triangle`
+- The one is at the apex and the eight in the middle of the third row. — `table::tests::the_one_leads_and_the_eight_is_buried`
 - A ball reaching a pocket is potted. — `table::tests::a_ball_in_the_jaws_is_potted`
 - And one on a rail or in the middle of the table is not. — `table::tests::the_rails_are_not_pockets`
 - No rail covers a pocket, or nothing could be potted in it. — `table::tests::a_ball_can_reach_every_pocket`
@@ -176,7 +180,7 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 
 ### Verified by hand
 
-- The break scatters nine balls and none of them ends up inside another. This is
+- The break scatters fifteen balls and none of them ends up inside another. This is
   the harder test of the engine's one pass over the pairs than carom's cross: a
   rack is touching where a cross is a tenth of a ball apart.
 - A ball potted drops and is gone, and nothing about it stutters on the way.

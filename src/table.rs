@@ -106,10 +106,10 @@ pub fn is_potted(at: Vec3) -> bool {
 }
 
 /// How many balls are racked, and which of them is which.
-pub const BALLS: usize = 9;
-/// The lowest ball, at the apex, and the one that wins, in the middle.
+pub const BALLS: usize = 15;
+/// The ball at the apex, and the one buried in the middle of the triangle.
 pub const ONE: usize = 1;
-pub const NINE: usize = 9;
+pub const EIGHT: usize = 8;
 
 /// How far apart the rack sits them, middle to middle.
 ///
@@ -127,14 +127,14 @@ pub fn head_spot() -> Vec3 {
     vec3(-HALF_LONG * 0.5, BALL_RADIUS, 0.0)
 }
 
-/// The rack, as a position for each ball from one to nine.
+/// The rack, as a position for each ball from one to fifteen.
 ///
-/// A diamond pointing at the head of the table: one at the apex, nine in the
+/// A triangle pointing at the head of the table: one at the apex, eight in the
 /// middle where it is hardest to reach, and the rest wherever they fall.
 pub fn rack() -> Vec<Vec3> {
     let apex = foot_spot();
     let row = TIGHT * 0.866; // the height of a triangle of touching balls
-    let rows: [usize; 5] = [1, 2, 3, 2, 1];
+    let rows: [usize; 5] = [1, 2, 3, 4, 5];
 
     // one, then the rest in order, with the nine put in the middle afterwards
     let mut spots = Vec::with_capacity(BALLS);
@@ -146,20 +146,27 @@ pub fn rack() -> Vec<Vec3> {
         }
     }
 
-    // the apex is the one, the middle of the middle row is the nine, and the
+    // the apex is the one, the middle of the third row is the eight, and the
     // others take what is left in the order they come
     let middle = 1 + 2 + 1;
     let mut at = vec![Vec3::ZERO; BALLS];
-    at[0] = spots[0];
-    at[NINE - 1] = spots[middle];
+    at[ONE - 1] = spots[0];
+    at[EIGHT - 1] = spots[middle];
 
-    let mut next = ONE;
-    for (seat, spot) in spots.iter().enumerate() {
-        if seat == 0 || seat == middle {
+    // the seats left over, handed to the balls that have no seat of their own.
+    // Counting a ball number up alongside the seats put the eight back in the
+    // pile and left the last ball at the origin.
+    let mut spare = spots
+        .iter()
+        .enumerate()
+        .filter(|(seat, _)| *seat != 0 && *seat != middle)
+        .map(|(_, spot)| *spot);
+
+    for ball in 1..=BALLS {
+        if ball == ONE || ball == EIGHT {
             continue;
         }
-        next += 1;
-        at[next - 1] = *spot;
+        at[ball - 1] = spare.next().expect("a seat for every ball");
     }
 
     at
@@ -170,7 +177,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_rack_is_a_diamond() {
+    fn the_rack_is_a_triangle() {
         let at = rack();
 
         assert_eq!(at.len(), BALLS);
@@ -206,13 +213,23 @@ mod tests {
         rows.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
 
         assert_eq!(rows.len(), 5, "it is not five rows deep: {:?}", rows);
+
+        // and each row is wider than the last, which is what makes it a
+        // triangle rather than the diamond this started as
+        let mut wide: Vec<usize> = rows
+            .iter()
+            .map(|row| at.iter().filter(|ball| (ball.x - row).abs() < 1e-3).count())
+            .collect();
+        wide.dedup();
+
+        assert_eq!(wide, vec![1, 2, 3, 4, 5], "the rows are not a triangle");
     }
 
     #[test]
-    fn the_one_leads_and_the_nine_is_buried() {
+    fn the_one_leads_and_the_eight_is_buried() {
         let at = rack();
         let one = at[ONE - 1];
-        let nine = at[NINE - 1];
+        let eight = at[EIGHT - 1];
 
         for (n, ball) in at.iter().enumerate() {
             if n + 1 == ONE {
@@ -225,8 +242,21 @@ mod tests {
             );
         }
 
-        assert!(nine.x > one.x, "the nine is not behind the one");
-        assert!(nine.z.abs() < 1e-3, "the nine is not on the middle line");
+        assert!(eight.x > one.x, "the eight is not behind the one");
+        assert!(eight.z.abs() < 1e-3, "the eight is not on the middle line");
+
+        // the middle of the triangle: two rows in front of it and two behind
+        let rows: Vec<f32> = {
+            let mut all: Vec<f32> = at.iter().map(|ball| ball.x).collect();
+            all.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            all.dedup_by(|a, b| (*a - *b).abs() < 1e-3);
+            all
+        };
+
+        assert!(
+            (eight.x - rows[2]).abs() < 1e-3,
+            "the eight is not in the third row"
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 # 0001 The rack
 
-**Status:** draft
+**Status:** implemented
 **Date:** 2026-10-01
 
 ## Goal
@@ -60,15 +60,22 @@ later shots until it leaves the world, and a falling body is a body still moving
 and one at the middle of each long rail. Real proportions, in units where a ball
 is one across.
 
-**Pockets are gaps rather than holes.** The cushions are boxes with spaces
-between them and the cloth is a box with the pockets cut out of it, so a ball
-that reaches one has nothing under it and falls. The game catches it on the way
-down and takes it out of play. This is what the engine's static world can
-express, and it happens to be what a pocket is.
+**The cushions are gaps. The cloth is not.** Six lengths of rail with a space at
+every pocket, so a ball on its way to one goes between real geometry rather than
+through a special case in the rules. The cloth under them is one piece with an
+apron past the rails, and a ball is potted by reaching the jaws rather than by
+falling through a hole.
 
-**A ball that falls has to be caught in the same step it starts falling.** Not
-eventually. carom waited twenty seconds for a falling marble because nothing was
-watching.
+That is a change from what this spec first said, which was holes in the cloth and
+a ball caught on the way down. Prettier, and it is also exactly how carom lost
+half a minute a shot: a body with nothing under it falls for ever, a falling body
+is a body still moving, and the shot never ends. There is no sense building the
+same trap twice to see if it still works.
+
+**A potted ball comes off the table in the step it reaches the jaws**, not when
+the shot ends. Past the cushions there is apron and then nothing, so a ball left
+rolling after it has been potted finds the edge of the world. This was still
+wrong when the rules were first written, and sixteen test breaks found it.
 
 ## What it asks of blitzkit
 
@@ -114,21 +121,35 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 - The rack is nine balls in a diamond, inside the table and clear of each other. — `table::tests::the_rack_is_a_diamond`
 - The one is at the apex and the nine in the middle. — `table::tests::the_one_leads_and_the_nine_is_buried`
 - A ball reaching a pocket is potted. — `table::tests::a_ball_in_the_jaws_is_potted`
-- And one that passes over a rail is not. — `table::tests::the_rails_are_not_pockets`
-- Nothing can reach the edge of the world. — `table::tests::nothing_leaves_the_table`
+- And one on a rail or in the middle of the table is not. — `table::tests::the_rails_are_not_pockets`
+- No rail covers a pocket, or nothing could be potted in it. — `table::tests::a_ball_can_reach_every_pocket`
+- A new run is a full rack, no shots, and the cue ball in hand. — `rules::tests::a_new_run_is_a_full_rack`
 - Hitting the lowest ball first is legal. — `rules::tests::the_lowest_ball_first_is_legal`
 - Hitting anything else first is a foul. — `rules::tests::any_other_ball_first_is_a_foul`
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
-- Potting the cue ball is a foul. — `rules::tests::potting_the_cue_ball_is_a_foul`
+- Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
 - No cushion after contact is a foul. — `rules::tests::no_rail_after_contact_is_a_foul`
 - A foul costs a shot and gives ball in hand. — `rules::tests::a_foul_costs_a_shot_and_the_cue_ball`
-- Potting the nine ends the run, whenever it happens. — `rules::tests::the_nine_ends_it`
+- And the cue ball cannot be moved at any other time. — `rules::tests::the_cue_ball_cannot_be_moved_unless_it_is_in_hand`
+- Potting the nine ends the run. — `rules::tests::the_nine_ends_it`
 - Including on the break. — `rules::tests::the_nine_on_the_break_ends_it`
 - A potted ball leaves play and no later shot moves it. — `rules::tests::a_potted_ball_is_out_of_play`
-- Every shot ends, from any aim, speed and strike. — `shot::tests::no_shot_runs_for_ever`
+- Every break ends, from any aim, at everything there is. — `rules::tests::no_shot_runs_for_ever`
+- And nothing still in play ever leaves the table. — `rules::tests::nothing_in_play_leaves_the_table`
+- The hardest shot can run the table and come back. — `shot::tests::a_ball_can_run_the_table`
 - A ball struck low leaves the cue ball behind where they met. — `shot::tests::low_draws_the_cue_ball_back`
 - And struck high, well past it. — `shot::tests::high_runs_the_cue_ball_on`
+- With every height between those in order. — `shot::tests::the_whole_range_is_in_order`
 - Side changes the angle off a cushion. — `shot::tests::side_changes_the_angle_off_a_rail`
+- The tip lands on the ball, wherever it is aimed. — `shot::tests::the_tip_lands_on_the_ball`
+- The cursor points the shot. — `diamond_game::tests::the_cursor_points_the_shot`
+- A cursor off the window does not move it. — `diamond_game::tests::a_cursor_off_the_window_does_not_move_the_shot`
+- The arrow keys move the tip and keep it on the ball. — `diamond_game::tests::the_arrow_keys_move_the_tip_and_stay_on_the_ball`
+- Space puts it back in the middle. — `diamond_game::tests::space_puts_the_tip_back_in_the_middle`
+- In hand, a click places the cue ball rather than shooting. — `diamond_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
+- The readout is cleared each frame rather than piling up. — `diamond_game::tests::the_readout_does_not_pile_up`
+- And its lines are evenly spaced. — `diamond_game::tests::the_readout_lines_are_evenly_spaced`
+- One shot reads as one shot, and one foul as one foul. — `diamond_game::tests::one_shot_is_not_one_shots`
 
 ### Verified by hand
 
@@ -143,6 +164,12 @@ takes, how much draw a given cloth leaves by the time the balls meet.
   something to a player.
 - The rails bounce too hard. Say so here until the engine can give them a
   material of their own, rather than quietly tuning the balls to hide it.
+- The pockets read as holes rather than as anything shiny. The specular in
+  blitzkit spec 0012 is not tinted by the material colour, so a black slab still
+  takes a full white highlight, and the lobe is `pow(dot, shininess)`: a low
+  shininess is a huge one. A squashed sphere at the default came out as a white
+  blob and a slab at a shininess of one came out whiter, which is why they are
+  drawn flat at 256.
 
 ## Out of scope
 

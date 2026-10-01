@@ -5,9 +5,9 @@
 
 ## Goal
 
-Nine balls in a diamond, and a cue ball you hit them with. Pot them in order, one
-through nine, and the shot that matters is rarely the one you are taking: it is
-where the cue ball stops for the next one.
+Nine balls in a diamond, and a cue ball you hit them with. Pot them all, and the
+shot that matters is rarely the one you are taking: it is where the cue ball
+stops for the next one.
 
 The tenth game on blitzkit, and the first where the player is aiming at the ball
 after this one.
@@ -34,20 +34,33 @@ same place. With it, every shot has a second half.
 the foot spot and the nine in the middle. The others go where they fall; a real
 rack randomises them and so does this.
 
-**You must hit the lowest ball on the table first.** That is the whole of nine
-ball's ordering rule. Anything may be potted after that contact, including by
-carom off the lowest ball, and potting the nine wins at any point: on the break,
-off a combination, or last of all.
+**There is no order.** Hit any ball first and pot any ball, and the run ends when
+the table is clear.
+
+This spec had nine ball's ordering rule, lowest ball first with the nine winning
+whenever it dropped, and Jake took it out. What is left is nine balls and as few
+shots as you can manage, which is the same game of position without a rule to
+read. The wrong ball foul went with it.
 
 **A shot is a direction, a speed, and a place on the cue ball.** The cursor aims
 it, as in carom, through blitzkit spec 0025. Where on the ball it is struck is a
 second input and the one this game is about: low, high, or off to one side.
 
+**Putting the cue ball down is what ends being in hand.** One click places it,
+and the next press and hold is a shot. Without that every click put the ball
+somewhere again and nothing ever got as far as shooting, which is how it shipped
+the first time.
+
+**A cursor on top of the cue ball points nowhere**, and the shot keeps the
+direction it had. The direction from a ball to itself is nothing at all, and
+putting the ball down under the cursor does exactly that, so a shot taken
+straight afterwards was refused in silence.
+
 **A foul costs a shot and gives you the cue ball in hand.** The fouls are the cue
 ball potted, no contact with the lowest ball, and no ball reaching a cushion after
 contact. In hand means you place it anywhere before shooting again.
 
-**The run ends when the nine is potted**, and the score is the shots it took,
+**The run ends when the table is clear**, and the score is the shots it took,
 fouls included. One player, as carom is. An opponent is a different spec.
 
 **A ball potted is out of play.** It leaves the table and stops being simulated,
@@ -71,6 +84,15 @@ a ball caught on the way down. Prettier, and it is also exactly how carom lost
 half a minute a shot: a body with nothing under it falls for ever, a falling body
 is a body still moving, and the shot never ends. There is no sense building the
 same trap twice to see if it still works.
+
+**A ball meets a cushion if its path meets one**, swept along where it was going
+rather than looked for where it ended up. Two wrong answers came first. Asking
+whether a ball is near a rail misses it, because a ball bounces inside the step
+it touches and never ends one at touching distance: the closest a measured one
+got was 0.536 against a ball radius of 0.5. Sweeping from where it was to where
+it ended up misses it too, because a step containing a bounce has a net
+displacement pointing away from the rail. Where it was and where it was going is
+the path `through_the_world` sweeps, and `sweep_sphere` is what it sweeps with.
 
 **A potted ball comes off the table in the step it reaches the jaws**, not when
 the shot ends. Past the cushions there is apron and then nothing, so a ball left
@@ -124,15 +146,14 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 - And one on a rail or in the middle of the table is not. — `table::tests::the_rails_are_not_pockets`
 - No rail covers a pocket, or nothing could be potted in it. — `table::tests::a_ball_can_reach_every_pocket`
 - A new run is a full rack, no shots, and the cue ball in hand. — `rules::tests::a_new_run_is_a_full_rack`
-- Hitting the lowest ball first is legal. — `rules::tests::the_lowest_ball_first_is_legal`
-- Hitting anything else first is a foul. — `rules::tests::any_other_ball_first_is_a_foul`
+- Any ball may be hit first. — `rules::tests::any_ball_first_is_legal`
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
 - Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
 - No cushion after contact is a foul. — `rules::tests::no_rail_after_contact_is_a_foul`
 - A foul costs a shot and gives ball in hand. — `rules::tests::a_foul_costs_a_shot_and_the_cue_ball`
 - And the cue ball cannot be moved at any other time. — `rules::tests::the_cue_ball_cannot_be_moved_unless_it_is_in_hand`
-- Potting the nine ends the run. — `rules::tests::the_nine_ends_it`
-- Including on the break. — `rules::tests::the_nine_on_the_break_ends_it`
+- An empty table ends the run. — `rules::tests::an_empty_table_ends_it`
+- And one with a ball still on it does not. — `rules::tests::a_table_with_one_ball_left_is_not_over`
 - A potted ball leaves play and no later shot moves it. — `rules::tests::a_potted_ball_is_out_of_play`
 - Every break ends, from any aim, at everything there is. — `rules::tests::no_shot_runs_for_ever`
 - And nothing still in play ever leaves the table. — `rules::tests::nothing_in_play_leaves_the_table`
@@ -147,6 +168,8 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 - The arrow keys move the tip and keep it on the ball. — `diamond_game::tests::the_arrow_keys_move_the_tip_and_stay_on_the_ball`
 - Space puts it back in the middle. — `diamond_game::tests::space_puts_the_tip_back_in_the_middle`
 - In hand, a click places the cue ball rather than shooting. — `diamond_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
+- And the click after that winds up a shot and takes it. — `diamond_game::tests::placing_the_cue_ball_lets_the_next_click_shoot`
+- Putting it down ends being in hand, and a later click does not pick it up. — `rules::tests::putting_it_down_ends_being_in_hand`
 - The readout is cleared each frame rather than piling up. — `diamond_game::tests::the_readout_does_not_pile_up`
 - And its lines are evenly spaced. — `diamond_game::tests::the_readout_lines_are_evenly_spaced`
 - One shot reads as one shot, and one foul as one foul. — `diamond_game::tests::one_shot_is_not_one_shots`
@@ -164,7 +187,7 @@ takes, how much draw a given cloth leaves by the time the balls meet.
   something to a player.
 - The rails bounce too hard. Say so here until the engine can give them a
   material of their own, rather than quietly tuning the balls to hide it.
-- The pockets read as holes rather than as anything shiny. The specular in
+- The pockets are round, and read as holes rather than as anything shiny. The specular in
   blitzkit spec 0012 is not tinted by the material colour, so a black slab still
   takes a full white highlight, and the lobe is `pow(dot, shininess)`: a low
   shininess is a huge one. A squashed sphere at the default came out as a white

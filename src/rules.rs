@@ -1,11 +1,12 @@
 //! A run: the balls, whose turn it would be if there were two of you, what is
 //! legal and what is a foul. See `specs/0001-the-rack.md`.
 
+use blitzkit::collision::{sweep_sphere, Sphere};
 use blitzkit::physics::{step, Body};
 use glam::Vec3;
 
 use crate::shot::{self, ball};
-use crate::table::{self, BALLS, NINE};
+use crate::table::{self, BALLS};
 
 /// The cue ball is body zero and the nine numbered balls follow it, so a ball's
 /// number is its index and nothing has to be searched for.
@@ -38,8 +39,6 @@ pub enum Outcome {
 pub enum Foul {
     /// Hit nothing at all.
     Missed,
-    /// Hit something other than the lowest ball on the table first.
-    WrongBall,
     /// Potted the cue ball.
     Scratched,
     /// Nothing reached a cushion after the balls met.
@@ -114,10 +113,13 @@ impl Run {
         self.bodies[CUE].position
     }
 
-    /// The lowest numbered ball still on the table, which is the one that has
-    /// to be hit first.
-    pub fn lowest(&self) -> Option<usize> {
-        (1..=BALLS).find(|ball| !self.down[*ball])
+    /// How many balls are still on the table.
+    ///
+    /// Any of them may be hit first and any may be potted: this spec had the
+    /// lowest ball first, which is nine ball's rule, and Jake took it out. What
+    /// is left is potting nine balls in as few shots as you can.
+    pub fn left(&self) -> usize {
+        (1..=BALLS).filter(|ball| !self.down[*ball]).count()
     }
 
     /// Puts the cue ball somewhere, which is only allowed in hand.
@@ -129,6 +131,10 @@ impl Run {
         self.bodies[CUE].position = at;
         self.bodies[CUE].velocity = Vec3::ZERO;
         self.bodies[CUE].spin = Vec3::ZERO;
+
+        // putting it down is what ends being in hand. Without this every click
+        // put the ball somewhere and none of them ever got as far as a shot.
+        self.in_hand = false;
     }
 
     /// Takes the shot: an impulse, struck `off` the middle of the cue ball.
@@ -157,6 +163,12 @@ impl Run {
 
         let playing: Vec<usize> = (0..=BALLS).filter(|ball| !self.down[*ball]).collect();
         let mut moving: Vec<Body> = playing.iter().map(|at| self.bodies[*at]).collect();
+        // where each ball was and where it was going, which is the path the
+        // engine is about to sweep
+        let before: Vec<(Vec3, Vec3)> = moving
+            .iter()
+            .map(|body| (body.position, body.velocity))
+            .collect();
 
         step(&mut moving, &shot::world(), shot::GRAVITY, dt);
 
@@ -164,7 +176,7 @@ impl Run {
             self.bodies[*at] = moving[n];
         }
 
-        self.watch(&playing);
+        self.watch(&playing, &before, dt);
 
         self.rolled += 1;
         if !shot::nothing_is_moving(&moving) && self.rolled < shot::LONGEST {
@@ -176,7 +188,7 @@ impl Run {
 
     /// Writes down what this step did: the first ball the cue ball met, whether
     /// anything has reached a cushion since, and what went down.
-    fn watch(&mut self, playing: &[usize]) {
+    fn watch(&mut self, playing: &[usize], before: &[(Vec3, Vec3)], dt: f32) {
         let cue = self.bodies[CUE].position;
 
         if self.doing.first_hit.is_none() {
@@ -191,7 +203,10 @@ impl Run {
             }
             self.doing.first_hit = met;
         } else if !self.doing.reached_a_rail {
-            self.doing.reached_a_rail = playing.iter().any(|ball| self.on_a_rail(*ball));
+            self.doing.reached_a_rail = playing
+                .iter()
+                .zip(before)
+                .any(|(_, (was, going))| self.met_a_rail(*was, *going, dt));
         }
 
         // taken off the table the moment it reaches the jaws, not when the shot
@@ -209,16 +224,29 @@ impl Run {
         }
     }
 
-    /// Whether this ball is against a cushion.
-    fn on_a_rail(&self, ball: usize) -> bool {
-        let at = self.bodies[ball].position;
-        let reach = table::BALL_RADIUS + 1e-2;
+    /// Whether a ball meets a cushion on the path it is about to take.
+    ///
+    /// Along where it was going, not from where it was to where it ended up.
+    /// Two wrong answers came before this one. Asking whether a ball is near a
+    /// rail misses it: a ball bounces inside the step it touches, so it never
+    /// ends one at touching distance, and the closest this one got was 0.536
+    /// against a ball radius of 0.5. Sweeping from where it was to where it
+    /// ended up misses it too, because a step containing a bounce has a net
+    /// displacement pointing away from the rail.
+    ///
+    /// Where it was and where it was going is the path `through_the_world`
+    /// sweeps, and `sweep_sphere` is what it sweeps with.
+    fn met_a_rail(&self, was: Vec3, going: Vec3, dt: f32) -> bool {
+        let path = going * dt;
+        if path.length_squared() < 1e-12 {
+            return false;
+        }
 
-        table::cushions().iter().any(|rail| {
-            let near = at.clamp(rail.min, rail.max);
+        let body = Sphere::new(was, table::BALL_RADIUS);
 
-            at.distance(near) <= reach
-        })
+        table::cushions()
+            .iter()
+            .any(|rail| sweep_sphere(&body, path, rail).is_some())
     }
 
     /// The shot is over: take down what went down, and say what it was.
@@ -229,16 +257,11 @@ impl Run {
         // the cue ball always comes back, however it left
         self.down[CUE] = false;
 
-        let lowest_before = (1..=BALLS)
-            .find(|ball| !self.down[*ball] || potted.contains(ball))
-            .unwrap_or(NINE);
-
         let foul = if scratched {
             Some(Foul::Scratched)
         } else {
             match self.doing.first_hit {
                 None => Some(Foul::Missed),
-                Some(hit) if hit != lowest_before => Some(Foul::WrongBall),
                 Some(_) if !self.doing.reached_a_rail && potted.is_empty() => Some(Foul::NoRail),
                 _ => None,
             }
@@ -259,9 +282,9 @@ impl Run {
             });
         }
 
-        // the nine ends it however it went down, and a foul does not take it
-        // back: the ball is still in the pocket
-        self.phase = if self.down[NINE] {
+        // an empty table ends it, and a foul does not take a ball back out of a
+        // pocket
+        self.phase = if self.left() == 0 {
             Phase::Over
         } else {
             Phase::Aiming
@@ -278,6 +301,7 @@ impl Run {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::table::NINE;
     use glam::{vec2, vec3};
 
     use crate::table::{HALF_LONG, HALF_WIDE};
@@ -329,38 +353,23 @@ mod tests {
 
         assert_eq!(run.shots(), 0);
         assert_eq!(run.fouls(), 0);
-        assert_eq!(run.lowest(), Some(1));
+        assert_eq!(run.left(), BALLS);
         assert_eq!(run.phase(), Phase::Aiming);
         assert!(run.in_hand, "the break is from hand");
     }
 
     #[test]
-    fn the_lowest_ball_first_is_legal() {
-        let mut run = only(&[1, 9]);
-        lined_up(&mut run, 1, 6.0);
-
-        // hard enough to put a ball on a cushion, or it is a foul and rightly
-        run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
-        settle(&mut run);
-
-        assert_eq!(run.fouls(), 0, "{:?}", run.last);
-        assert!(matches!(
-            run.last,
-            Some(Outcome::Dry) | Some(Outcome::Potted)
-        ));
-    }
-
-    #[test]
-    fn any_other_ball_first_is_a_foul() {
+    fn any_ball_first_is_legal() {
+        // this had to be the lowest ball on the table, which is nine ball's
+        // rule and the one Jake took out
         let mut run = only(&[1, 5]);
         lined_up(&mut run, 5, 6.0);
         run.bodies[1].position = vec3(0.0, table::BALL_RADIUS, HALF_WIDE * 0.7);
 
-        run.shoot(Vec3::X, shot::HARDEST * 0.5, vec2(0.0, 0.0));
+        run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
         settle(&mut run);
 
-        assert_eq!(run.last, Some(Outcome::Foul(Foul::WrongBall)));
-        assert_eq!(run.fouls(), 1);
+        assert_eq!(run.fouls(), 0, "{:?}", run.last);
     }
 
     #[test]
@@ -435,6 +444,22 @@ mod tests {
     }
 
     #[test]
+    fn putting_it_down_ends_being_in_hand() {
+        let mut run = only(&[1]);
+        assert!(run.in_hand, "the break is from hand");
+
+        run.place(vec3(-5.0, table::BALL_RADIUS, 2.0));
+
+        assert!(!run.in_hand, "it is still in hand after being put down");
+
+        // and a second click does not pick it up again
+        let down = run.cue();
+        run.place(vec3(1.0, table::BALL_RADIUS, 1.0));
+
+        assert_eq!(run.cue(), down, "a later click moved it");
+    }
+
+    #[test]
     fn the_cue_ball_cannot_be_moved_unless_it_is_in_hand() {
         let mut run = only(&[1]);
         lined_up(&mut run, 1, 6.0);
@@ -446,36 +471,33 @@ mod tests {
     }
 
     #[test]
-    fn the_nine_ends_it() {
+    fn an_empty_table_ends_it() {
         let mut run = only(&[9]);
-        // the nine in the jaws, the cue ball behind it
+        // the last ball in the jaws, the cue ball behind it
         run.bodies[9].position = vec3(HALF_LONG - 3.0, table::BALL_RADIUS, HALF_WIDE - 3.0);
         run.bodies[CUE].position = vec3(HALF_LONG - 7.0, table::BALL_RADIUS, HALF_WIDE - 7.0);
         run.in_hand = false;
+        for ball in 1..NINE {
+            run.down[ball] = true;
+        }
 
         run.shoot(vec3(1.0, 0.0, 1.0), shot::HARDEST * 0.5, vec2(0.0, 0.0));
         settle(&mut run);
 
-        assert!(run.is_down(9), "the nine is still up: {:?}", run.last);
+        assert_eq!(run.left(), 0, "something is still up: {:?}", run.last);
         assert_eq!(run.phase(), Phase::Over);
     }
 
     #[test]
-    fn the_nine_on_the_break_ends_it() {
-        // potting it at any time wins, and the break is a time
-        let mut run = Run::new();
-        run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
-        run.down[NINE] = true;
-        run.doing.potted.push(NINE);
-        run.doing.first_hit = Some(1);
-        run.doing.reached_a_rail = true;
-        for body in &mut run.bodies {
-            body.velocity = Vec3::ZERO;
-        }
-        run.step(shot::STEP);
+    fn a_table_with_one_ball_left_is_not_over() {
+        let mut run = only(&[1, 2]);
+        lined_up(&mut run, 1, 6.0);
 
-        assert_eq!(run.phase(), Phase::Over);
-        assert_eq!(run.shots(), 1);
+        run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert!(run.left() > 0);
+        assert_eq!(run.phase(), Phase::Aiming);
     }
 
     #[test]

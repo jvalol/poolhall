@@ -61,6 +61,12 @@ pub struct DiamondGame {
     pointing: Option<Vec2>,
     /// Where on the table it is pointing, if anywhere.
     aimed_at: Option<Vec3>,
+    /// Which way the shot goes. Kept rather than worked out fresh, because the
+    /// cursor can sit on top of the cue ball, and the direction from a ball to
+    /// itself is nothing at all. Putting the ball down under the cursor does
+    /// exactly that, so a shot taken straight afterwards was refused in
+    /// silence.
+    aim: Vec3,
     /// Where on the cue ball's face the tip goes, in radii.
     tip: Vec2,
     /// Up, down, left, right, held.
@@ -84,6 +90,7 @@ impl DiamondGame {
             run: Run::new(),
             pointing: None,
             aimed_at: None,
+            aim: Vec3::X,
             tip: Vec2::ZERO,
             nudging: [false; 4],
             power: 0.0,
@@ -96,14 +103,7 @@ impl DiamondGame {
 
     /// Which way the shot goes: from the cue ball towards what is pointed at.
     pub fn way(&self) -> Vec3 {
-        match self.aimed_at {
-            Some(at) => {
-                let off = at - self.run.cue();
-
-                vec3(off.x, 0.0, off.z).normalize_or_zero()
-            }
-            None => Vec3::X,
-        }
+        self.aim
     }
 
     fn line(&self, n: usize) -> Vec2 {
@@ -113,19 +113,19 @@ impl DiamondGame {
     fn readout(&self) -> Vec<String> {
         if self.run.phase() == Phase::Over {
             return vec![
-                format!("the nine is down in {}", shots(self.run.shots())),
+                format!("the table is clear in {}", shots(self.run.shots())),
                 format!("{} along the way", fouls(self.run.fouls())),
                 String::from("press r to rack them again"),
             ];
         }
 
-        let next = match self.run.lowest() {
-            Some(ball) => format!("hit the {} first", ball),
-            None => String::from("clear"),
+        let left = match self.run.left() {
+            1 => String::from("one ball left"),
+            left => format!("{} balls left", left),
         };
 
         vec![
-            format!("{}, {}", next, shots(self.run.shots())),
+            format!("{}, {}", left, shots(self.run.shots())),
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
                 _ if self.run.in_hand => String::from("ball in hand: click to place it"),
@@ -160,7 +160,6 @@ fn fouls(taken: u32) -> String {
 fn said(why: Foul) -> &'static str {
     match why {
         Foul::Missed => "foul: you hit nothing",
-        Foul::WrongBall => "foul: wrong ball first",
         Foul::Scratched => "foul: the cue ball went down",
         Foul::NoRail => "foul: nothing reached a cushion",
     }
@@ -241,6 +240,17 @@ impl Game for DiamondGame {
             self.aimed_at = on_the_cloth(camera, cursor);
         }
 
+        if let Some(at) = self.aimed_at {
+            let off = at - self.run.cue();
+            let way = vec3(off.x, 0.0, off.z);
+
+            // a cursor on top of the ball points nowhere, and the shot keeps
+            // whatever it had rather than taking a direction from nothing
+            if way.length() > BALL_RADIUS {
+                self.aim = way.normalize();
+            }
+        }
+
         let (Some(sphere), Some(block)) = (self.sphere, self.block) else {
             return;
         };
@@ -264,14 +274,15 @@ impl Game for DiamondGame {
             );
         }
 
-        // flat and barely shiny. The specular in spec 0012 is not tinted by the
-        // material colour, so a black slab still takes a full white highlight,
-        // and the lobe is `pow(dot, shininess)`: a low shininess is a huge one.
-        // A squashed sphere at the default came out white, and a slab at a
-        // shininess of one came out whiter.
+        // a squashed sphere, so a pocket is round rather than square, and
+        // barely shiny. The specular in spec 0012 is not tinted by the material
+        // colour, so a black thing still takes a full white highlight, and the
+        // lobe is `pow(dot, shininess)`: a low shininess is a huge one. This
+        // came out as a white blob at the default and whiter at a shininess of
+        // one, which is how it ended up square in the first place.
         for pocket in table::pockets() {
             scene.push_material(
-                block,
+                sphere,
                 &Transform::at(vec3(pocket.x, 0.02, pocket.z)).with_scale(vec3(
                     POCKET_MOUTH * 1.8,
                     0.08,
@@ -473,6 +484,33 @@ mod tests {
         assert_eq!(game.run.phase(), Phase::Aiming, "it shot while in hand");
         assert_eq!(game.run.shots(), 0);
         assert!(!game.charging, "it started winding up while in hand");
+    }
+
+    #[test]
+    fn placing_the_cue_ball_lets_the_next_click_shoot() {
+        // every click used to put the ball down again, so nothing ever got as
+        // far as winding up a shot
+        let mut game = DiamondGame::new();
+        let mut scene = Scene::new();
+        let mut camera = Camera::new();
+        game.cursor_moved(vec2(0.45, 0.55));
+        game.draw(&mut scene, &mut camera);
+
+        let press = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Pressed);
+        let let_go = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Released);
+
+        game.process_mouse(press);
+        assert!(
+            !game.run.in_hand,
+            "it is still in hand after being put down"
+        );
+        assert_eq!(game.run.shots(), 0, "putting it down took a shot");
+
+        game.process_mouse(press);
+        assert!(game.charging, "the next press did not wind up a shot");
+
+        game.process_mouse(let_go);
+        assert_eq!(game.run.shots(), 1, "letting go did not shoot");
     }
 
     #[test]

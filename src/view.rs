@@ -3,8 +3,19 @@
 
 use glam::{vec3, Vec3};
 
-/// How far the eye is from the middle of the table.
+/// How far the eye starts from the middle of the table.
 pub const BACK: f32 = 50.0;
+
+/// And how near or far it can get.
+///
+/// Near enough to read a thin cut, far enough that the whole table is still in
+/// the window. Closer than this and a ball fills the view; further and the
+/// table is a postage stamp.
+pub const CLOSEST: f32 = 16.0;
+pub const FURTHEST: f32 = 80.0;
+
+/// How far one notch of the wheel moves it.
+pub const BACK_PER_NOTCH: f32 = 0.06;
 
 /// How high it can get and how low it can stoop, in radians.
 ///
@@ -33,6 +44,8 @@ pub struct View {
     pub about: f32,
     /// And up from the cloth.
     pub above: f32,
+    /// And how far out.
+    pub back: f32,
 }
 
 impl Default for View {
@@ -46,6 +59,7 @@ impl View {
         Self {
             about: FROM,
             above: ABOVE,
+            back: BACK,
         }
     }
 
@@ -55,13 +69,22 @@ impl View {
         self.above = (self.above + down * RISE_PER_PIXEL).clamp(LOWEST, HIGHEST);
     }
 
+    /// Leans in or out by this many notches of the wheel.
+    ///
+    /// A share of where it is rather than a fixed distance, so a notch moves it
+    /// as much from close up as from far off. A fixed step crawls at one end
+    /// and jumps at the other.
+    pub fn zoomed(&mut self, notches: f32) {
+        self.back = (self.back * (1.0 - notches * BACK_PER_NOTCH)).clamp(CLOSEST, FURTHEST);
+    }
+
     /// Where the eye is.
     pub fn eye(&self) -> Vec3 {
-        let out = self.above.cos() * BACK;
+        let out = self.above.cos() * self.back;
 
         vec3(
             self.about.sin() * out,
-            self.above.sin() * BACK,
+            self.above.sin() * self.back,
             self.about.cos() * out,
         )
     }
@@ -130,6 +153,64 @@ mod tests {
 
         view.dragged(0.0, -300.0);
         assert!(view.eye().y < was, "it did not stoop");
+    }
+
+    #[test]
+    fn the_wheel_leans_in_and_out() {
+        let mut view = View::new();
+        let out = view.eye();
+
+        view.zoomed(3.0);
+        let near = view.eye();
+
+        assert!(near.length() < out.length(), "it did not lean in");
+        assert!(
+            near.normalize().dot(out.normalize()) > 0.9999,
+            "leaning in moved it round the table"
+        );
+
+        view.zoomed(-6.0);
+        assert!(view.eye().length() > near.length(), "it did not lean out");
+    }
+
+    #[test]
+    fn it_cannot_lean_past_the_table_or_into_a_ball() {
+        let mut view = View::new();
+
+        view.zoomed(1000.0);
+        assert!(
+            view.back >= CLOSEST,
+            "it leaned past the table: {}",
+            view.back
+        );
+
+        view.zoomed(-1000.0);
+        assert!(view.back <= FURTHEST, "it leaned into the next room");
+    }
+
+    #[test]
+    fn a_notch_is_worth_the_same_from_anywhere() {
+        // a share of where it is rather than a fixed step, or it crawls at one
+        // end and jumps at the other
+        let mut near = View::new();
+        near.back = CLOSEST * 1.5;
+        let was_near = near.back;
+        near.zoomed(1.0);
+
+        let mut far = View::new();
+        far.back = FURTHEST * 0.9;
+        let was_far = far.back;
+        far.zoomed(1.0);
+
+        let near_share = (was_near - near.back) / was_near;
+        let far_share = (was_far - far.back) / was_far;
+
+        assert!(
+            (near_share - far_share).abs() < 1e-5,
+            "{} {}",
+            near_share,
+            far_share
+        );
     }
 
     #[test]

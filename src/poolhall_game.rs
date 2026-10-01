@@ -439,6 +439,11 @@ impl Game for PoolhallGame {
         }
     }
 
+    /// The wheel leans in and out, per spec 0003.
+    fn mouse_wheel(&mut self, delta: Vec2) {
+        self.view.zoomed(delta.y);
+    }
+
     fn is_quitting(&self) -> bool {
         self.quitting
     }

@@ -1,4 +1,4 @@
-# diamond
+# poolhall
 
 It's like pool, but different.
 

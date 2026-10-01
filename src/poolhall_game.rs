@@ -61,7 +61,7 @@ const PAINT: [Vec4; BALLS] = [
     vec4(0.84, 0.60, 0.61, 1.0),
 ];
 
-pub struct DiamondGame {
+pub struct PoolhallGame {
     run: Run,
     /// Where the cursor is, in pixels, while it is over the window.
     pointing: Option<Vec2>,
@@ -91,13 +91,13 @@ pub struct DiamondGame {
     quitting: bool,
 }
 
-impl Default for DiamondGame {
+impl Default for PoolhallGame {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DiamondGame {
+impl PoolhallGame {
     pub fn new() -> Self {
         Self {
             run: Run::new(),
@@ -203,7 +203,7 @@ fn on_the_cloth(camera: &Camera, cursor: Vec2) -> Option<Vec3> {
     (along > 0.0).then(|| ray.at(along))
 }
 
-impl Game for DiamondGame {
+impl Game for PoolhallGame {
     fn initialize(
         &mut self,
         _geometry: &mut Geometry,
@@ -450,7 +450,7 @@ impl Game for DiamondGame {
 mod tests {
     use super::*;
 
-    fn aimed(game: &mut DiamondGame, cursor: Vec2) -> Vec3 {
+    fn aimed(game: &mut PoolhallGame, cursor: Vec2) -> Vec3 {
         let mut scene = Scene::new();
         let mut camera = Camera::new();
 
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn the_cursor_points_the_shot() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
 
         let left = aimed(&mut game, vec2(0.2, 0.5));
         let right = aimed(&mut game, vec2(0.8, 0.5));
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn a_cursor_off_the_window_does_not_move_the_shot() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let was = aimed(&mut game, vec2(0.3, 0.5));
 
         let mut scene = Scene::new();
@@ -486,7 +486,7 @@ mod tests {
 
     #[test]
     fn the_arrow_keys_move_the_tip_and_stay_on_the_ball() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let mut text = TextRenderer::new();
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
@@ -510,7 +510,7 @@ mod tests {
 
     #[test]
     fn space_puts_the_tip_back_in_the_middle() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         game.tip = vec2(0.7, -0.6);
 
         game.process_keyboard(KeyboardInput::new(
@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn in_hand_a_click_places_the_cue_ball_rather_than_shooting() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         assert!(game.run.in_hand, "the break is from hand");
 
         let mut scene = Scene::new();
@@ -546,7 +546,7 @@ mod tests {
     fn placing_the_cue_ball_lets_the_next_click_shoot() {
         // every click used to put the ball down again, so nothing ever got as
         // far as winding up a shot
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let mut scene = Scene::new();
         let mut camera = Camera::new();
         game.cursor_moved(vec2(0.45, 0.55));
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn the_right_button_walks_and_the_left_shoots() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let was = game.view.eye();
 
         // the right button is the one nothing else is using
@@ -601,7 +601,7 @@ mod tests {
 
     #[test]
     fn walking_moves_the_eye_and_not_the_table() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let mut scene = Scene::new();
         let mut camera = Camera::new();
 
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn the_readout_does_not_pile_up() {
-        let mut game = DiamondGame::new();
+        let mut game = PoolhallGame::new();
         let mut text = TextRenderer::new();
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
@@ -643,7 +643,7 @@ mod tests {
 
     #[test]
     fn the_readout_lines_are_evenly_spaced() {
-        let game = DiamondGame::new();
+        let game = PoolhallGame::new();
         let lines: Vec<Vec2> = (0..game.readout().len()).map(|n| game.line(n)).collect();
 
         for pair in lines.windows(2) {

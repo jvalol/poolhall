@@ -1,13 +1,15 @@
-# diamond
+# poolhall
 
 Fifteen balls in a triangle, and a cue ball to break them with. The tenth game on
 `blitzkit`. The dependency is the published crate, overridden by the engine
 checkout at `../blitzkit` when built inside this project folder.
 
-The rack is a triangle with the eight buried in the middle. The name is the
-sights on the rails, the diamonds you aim off, which outlive any one rack: this
-started as nine ball and its diamond of nine before Jake said he meant the
-triangle.
+The rack is a triangle with the eight buried in the middle.
+
+It was called diamond first, for nine ball's rack, and the name outlived both the
+game and the shape: nine ball became pool and the diamond became a triangle. The
+room is the one thing that cannot stop being true, which is why the third name is
+the one to keep.
 
 ## Build and test
 

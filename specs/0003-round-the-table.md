@@ -39,8 +39,8 @@ knows about the walk.
 - And right round comes back where it started. — `view::tests::walking_right_round_comes_back`
 - Dragging down and up changes the height. — `view::tests::dragging_up_and_down_changes_the_height`
 - It never lies flat on the cloth or gets under it. — `view::tests::it_never_lies_flat_or_looks_straight_down`
-- The right button walks and the left still shoots. — `diamond_game::tests::the_right_button_walks_and_the_left_shoots`
-- Walking moves the eye and leaves the table where it is. — `diamond_game::tests::walking_moves_the_eye_and_not_the_table`
+- The right button walks and the left still shoots. — `poolhall_game::tests::the_right_button_walks_and_the_left_shoots`
+- Walking moves the eye and leaves the table where it is. — `poolhall_game::tests::walking_moves_the_eye_and_not_the_table`
 
 ### Verified by hand
 

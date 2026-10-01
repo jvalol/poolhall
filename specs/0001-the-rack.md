@@ -167,16 +167,16 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 - With every height between those in order. — `shot::tests::the_whole_range_is_in_order`
 - Side changes the angle off a cushion. — `shot::tests::side_changes_the_angle_off_a_rail`
 - The tip lands on the ball, wherever it is aimed. — `shot::tests::the_tip_lands_on_the_ball`
-- The cursor points the shot. — `diamond_game::tests::the_cursor_points_the_shot`
-- A cursor off the window does not move it. — `diamond_game::tests::a_cursor_off_the_window_does_not_move_the_shot`
-- The arrow keys move the tip and keep it on the ball. — `diamond_game::tests::the_arrow_keys_move_the_tip_and_stay_on_the_ball`
-- Space puts it back in the middle. — `diamond_game::tests::space_puts_the_tip_back_in_the_middle`
-- In hand, a click places the cue ball rather than shooting. — `diamond_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
-- And the click after that winds up a shot and takes it. — `diamond_game::tests::placing_the_cue_ball_lets_the_next_click_shoot`
+- The cursor points the shot. — `poolhall_game::tests::the_cursor_points_the_shot`
+- A cursor off the window does not move it. — `poolhall_game::tests::a_cursor_off_the_window_does_not_move_the_shot`
+- The arrow keys move the tip and keep it on the ball. — `poolhall_game::tests::the_arrow_keys_move_the_tip_and_stay_on_the_ball`
+- Space puts it back in the middle. — `poolhall_game::tests::space_puts_the_tip_back_in_the_middle`
+- In hand, a click places the cue ball rather than shooting. — `poolhall_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
+- And the click after that winds up a shot and takes it. — `poolhall_game::tests::placing_the_cue_ball_lets_the_next_click_shoot`
 - Putting it down ends being in hand, and a later click does not pick it up. — `rules::tests::putting_it_down_ends_being_in_hand`
-- The readout is cleared each frame rather than piling up. — `diamond_game::tests::the_readout_does_not_pile_up`
-- And its lines are evenly spaced. — `diamond_game::tests::the_readout_lines_are_evenly_spaced`
-- One shot reads as one shot, and one foul as one foul. — `diamond_game::tests::one_shot_is_not_one_shots`
+- The readout is cleared each frame rather than piling up. — `poolhall_game::tests::the_readout_does_not_pile_up`
+- And its lines are evenly spaced. — `poolhall_game::tests::the_readout_lines_are_evenly_spaced`
+- One shot reads as one shot, and one foul as one foul. — `poolhall_game::tests::one_shot_is_not_one_shots`
 
 ### Verified by hand
 

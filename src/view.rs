@@ -15,14 +15,25 @@ pub const CLOSEST: f32 = 16.0;
 pub const FURTHEST: f32 = 80.0;
 
 /// How far one notch of the wheel moves it.
-pub const BACK_PER_NOTCH: f32 = 0.06;
+///
+/// Small. At 0.06 a flick of the wheel crossed the whole range, which is a
+/// zoom you fight rather than one you use.
+pub const BACK_PER_NOTCH: f32 = 0.018;
 
 /// How high it can get and how low it can stoop, in radians.
 ///
-/// Never flat, because a view along the cloth cannot point at anywhere on it,
-/// and never straight down, because the aim beads would be a dot.
-pub const LOWEST: f32 = 0.18;
-pub const HIGHEST: f32 = 1.35;
+/// Nearly flat to the cloth at one end and nearly straight down at the other,
+/// which is a hair under five degrees and a hair under ninety.
+///
+/// Not flat, because a view along the cloth never meets it and there is nowhere
+/// to point. Not exactly straight down either, and the reason this spec first
+/// gave for that was wrong: it said the aim beads would be a dot, when the
+/// beads lie on the cloth and a plan view is the clearest look at an angle
+/// there is. The real reason is the arithmetic. The eye looks along the up
+/// axis from directly over the table, and a view matrix built from two
+/// parallel vectors is nothing at all.
+pub const LOWEST: f32 = 0.08;
+pub const HIGHEST: f32 = 1.55;
 
 /// Where it starts: behind the head rail and well up.
 ///
@@ -214,15 +225,44 @@ mod tests {
     }
 
     #[test]
-    fn it_never_lies_flat_or_looks_straight_down() {
+    fn it_stops_a_hair_short_of_flat_and_of_straight_down() {
         let mut view = View::new();
 
         view.dragged(0.0, 10_000.0);
         assert!(view.above <= HIGHEST, "it went past the top");
+        assert!(
+            view.above < std::f32::consts::FRAC_PI_2,
+            "it looks straight down the up axis, which is no view at all"
+        );
         assert!(view.eye().y > 0.0);
 
         view.dragged(0.0, -20_000.0);
         assert!(view.above >= LOWEST, "it went under the cloth");
+        assert!(view.above > 0.0, "it lies flat on the cloth");
         assert!(view.eye().y > 0.0, "the eye is under the table");
+    }
+
+    #[test]
+    fn it_reaches_from_nearly_flat_to_nearly_overhead() {
+        // the range is the point: a plan view is the clearest look at an angle
+        // and a low one is the only way to read a thin cut
+        let mut view = View::new();
+
+        view.dragged(0.0, 10_000.0);
+        let over = view.eye();
+
+        view.dragged(0.0, -20_000.0);
+        let low = view.eye();
+
+        assert!(
+            over.y > over.length() * 0.99,
+            "the top of the range is not nearly overhead: {:?}",
+            over
+        );
+        assert!(
+            low.y < low.length() * 0.15,
+            "the bottom of the range is not nearly flat: {:?}",
+            low
+        );
     }
 }

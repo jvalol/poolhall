@@ -27,9 +27,20 @@ moves you as much from close up as from far off: a fixed step crawls at one end
 and jumps at the other. It stops near enough to read a thin cut and far enough
 that the whole table is still in the window.
 
-**You can neither lie flat on the cloth nor look straight down.** Flat, a cursor
-ray never meets the table and there is nowhere to point; straight down, the beads
-that show the shot are a dot. The height is clamped between the two.
+The share is small. At a seventeenth a flick of the wheel crossed the whole
+range, which is a zoom you fight rather than one you use.
+
+**The height runs from nearly flat to nearly overhead**, a hair under five
+degrees to a hair under ninety. Both ends are worth having: a plan view is the
+clearest look at an angle there is, and a low one is the only way to read a thin
+cut.
+
+Not flat, because a view along the cloth never meets it and there is nowhere to
+point. Not exactly straight down either, and the reason this spec first gave for
+that was wrong. It said the beads that show the shot would be a dot, when the
+beads lie on the cloth and are at their clearest from above. The real reason is
+the arithmetic: the eye looks along the up axis from directly over the table, and
+a view matrix built from two parallel vectors is nothing at all.
 
 **You start behind the head rail and well up**, which is where you break from and
 the view that shows the whole table.
@@ -48,7 +59,8 @@ knows about the walk.
 - A notch is worth the same share from anywhere. — `view::tests::a_notch_is_worth_the_same_from_anywhere`
 - And right round comes back where it started. — `view::tests::walking_right_round_comes_back`
 - Dragging down and up changes the height. — `view::tests::dragging_up_and_down_changes_the_height`
-- It never lies flat on the cloth or gets under it. — `view::tests::it_never_lies_flat_or_looks_straight_down`
+- It stops a hair short of flat and of straight down. — `view::tests::it_stops_a_hair_short_of_flat_and_of_straight_down`
+- And reaches from nearly flat to nearly overhead. — `view::tests::it_reaches_from_nearly_flat_to_nearly_overhead`
 - The right button walks and the left still shoots. — `poolhall_game::tests::the_right_button_walks_and_the_left_shoots`
 - Walking moves the eye and leaves the table where it is. — `poolhall_game::tests::walking_moves_the_eye_and_not_the_table`
 
@@ -56,7 +68,9 @@ knows about the walk.
 
 - A shot down the rail is readable from the end of the table and from the side,
   and they are different shots to read.
-- Stooping to the cloth makes a thin cut legible in a way the high view does not.
+- Stooping to the cloth makes a thin cut legible in a way the high view does not,
+  and going right overhead makes the angle between two balls obvious in a way no
+  other height does.
 - Leaning in gets a close enough eye on a shot to pick the contact point, and
   leaning out still shows the whole table.
 - The band on a striped ball is clearer from low down than from high up, which is

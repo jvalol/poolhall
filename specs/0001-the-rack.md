@@ -50,6 +50,14 @@ read. The wrong ball foul went with it.
 it, as in carom, through blitzkit spec 0025. Where on the ball it is struck is a
 second input and the one this game is about: low, high, or off to one side.
 
+**The cue ball can only be put down on the table**, inside the cushions, clear of
+the pockets and not inside a ball that is already there. A click anywhere else
+does nothing and you are still in hand.
+
+The cursor ray meets the cloth's plane wherever it is pointed and that plane goes
+on for ever, so the first version let the cue ball be put down in the dark past
+the rails.
+
 **Putting the cue ball down is what ends being in hand.** One click places it,
 and the next press and hold is a shot. Without that every click put the ball
 somewhere again and nothing ever got as far as shooting, which is how it shipped
@@ -174,6 +182,9 @@ takes, how much draw a given cloth leaves by the time the balls meet.
 - In hand, a click places the cue ball rather than shooting. — `poolhall_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
 - And the click after that winds up a shot and takes it. — `poolhall_game::tests::placing_the_cue_ball_lets_the_next_click_shoot`
 - Putting it down ends being in hand, and a later click does not pick it up. — `rules::tests::putting_it_down_ends_being_in_hand`
+- It cannot be put down past the rails or over a pocket. — `rules::tests::the_cue_ball_cannot_be_put_down_off_the_table`
+- Nor inside a ball already on the table. — `rules::tests::the_cue_ball_cannot_be_put_down_inside_another`
+- A ball can only rest on the cloth, inside the cushions. — `table::tests::a_ball_can_only_rest_on_the_table`
 - The readout is cleared each frame rather than piling up. — `poolhall_game::tests::the_readout_does_not_pile_up`
 - And its lines are evenly spaced. — `poolhall_game::tests::the_readout_lines_are_evenly_spaced`
 - One shot reads as one shot, and one foul as one foul. — `poolhall_game::tests::one_shot_is_not_one_shots`

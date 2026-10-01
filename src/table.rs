@@ -98,6 +98,18 @@ pub fn cushions() -> Vec<Aabb> {
     rails
 }
 
+/// Whether a ball could rest here: on the cloth, inside the cushions, and not
+/// hanging over a pocket.
+///
+/// The cursor ray meets the cloth's plane wherever it is pointed, and that plane
+/// goes on for ever, so without this the cue ball could be put down in the dark
+/// beyond the rails.
+pub fn is_on_the_table(at: Vec3) -> bool {
+    let room = BALL_RADIUS + 1e-3;
+
+    at.x.abs() < HALF_LONG - room && at.z.abs() < HALF_WIDE - room && !is_potted(at)
+}
+
 /// Whether a ball at this position is down a pocket.
 pub fn is_potted(at: Vec3) -> bool {
     pockets()
@@ -257,6 +269,34 @@ mod tests {
             (eight.x - rows[2]).abs() < 1e-3,
             "the eight is not in the third row"
         );
+    }
+
+    #[test]
+    fn a_ball_can_only_rest_on_the_table() {
+        assert!(is_on_the_table(vec3(0.0, BALL_RADIUS, 0.0)), "the middle");
+        assert!(is_on_the_table(head_spot()), "the head spot");
+        assert!(is_on_the_table(foot_spot()), "the foot spot");
+
+        for ball in rack() {
+            assert!(is_on_the_table(ball), "a racked ball at {:?}", ball);
+        }
+
+        // past the rails, which is where the cloth's plane carries on to
+        assert!(!is_on_the_table(vec3(HALF_LONG + 5.0, BALL_RADIUS, 0.0)));
+        assert!(!is_on_the_table(vec3(0.0, BALL_RADIUS, HALF_WIDE + 5.0)));
+        assert!(!is_on_the_table(vec3(-500.0, BALL_RADIUS, 500.0)));
+
+        // and hanging over the jaws of a pocket
+        for pocket in pockets() {
+            assert!(!is_on_the_table(pocket), "a pocket at {:?}", pocket);
+        }
+
+        // a ball touching a cushion is still on the table
+        assert!(is_on_the_table(vec3(
+            HALF_LONG - BALL_RADIUS - 0.05,
+            BALL_RADIUS,
+            0.0
+        )));
     }
 
     #[test]

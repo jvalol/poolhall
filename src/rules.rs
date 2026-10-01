@@ -132,6 +132,18 @@ impl Run {
         self.bodies[CUE].position
     }
 
+    /// Whether the cue ball could be put down here: on the table, and not
+    /// inside a ball that is already on it.
+    pub fn is_free(&self, at: Vec3) -> bool {
+        if !table::is_on_the_table(at) {
+            return false;
+        }
+
+        (1..=BALLS)
+            .filter(|ball| !self.down[*ball])
+            .all(|ball| self.bodies[ball].position.distance(at) > table::BALL_RADIUS * 2.0)
+    }
+
     /// How many balls are still on the table.
     ///
     /// Any of them may be hit first and any may be potted: this spec had the
@@ -143,7 +155,7 @@ impl Run {
 
     /// Puts the cue ball somewhere, which is only allowed in hand.
     pub fn place(&mut self, at: Vec3) {
-        if !self.in_hand || self.phase != Phase::Aiming {
+        if !self.in_hand || self.phase != Phase::Aiming || !self.is_free(at) {
             return;
         }
 
@@ -530,6 +542,37 @@ mod tests {
         run.place(vec3(1.0, table::BALL_RADIUS, 1.0));
 
         assert_eq!(run.cue(), down, "a later click moved it");
+    }
+
+    #[test]
+    fn the_cue_ball_cannot_be_put_down_off_the_table() {
+        // the cursor ray meets the cloth's plane wherever it is pointed, and
+        // that plane goes on for ever
+        let mut run = Run::new();
+        let on_the_spot = run.cue();
+
+        run.place(vec3(HALF_LONG + 20.0, table::BALL_RADIUS, 0.0));
+        assert_eq!(run.cue(), on_the_spot, "it went down past the foot rail");
+
+        run.place(vec3(0.0, table::BALL_RADIUS, HALF_WIDE + 20.0));
+        assert_eq!(run.cue(), on_the_spot, "it went down past the side rail");
+
+        assert!(run.in_hand, "a refused placing ended being in hand");
+    }
+
+    #[test]
+    fn the_cue_ball_cannot_be_put_down_inside_another() {
+        let mut run = Run::new();
+        let on_the_spot = run.cue();
+        let one = run.bodies[1].position;
+
+        run.place(one);
+        assert_eq!(run.cue(), on_the_spot, "it went down inside the one");
+
+        // but touching it is close enough
+        let beside = one - Vec3::X * table::BALL_RADIUS * 2.2;
+        run.place(beside);
+        assert_eq!(run.cue(), beside);
     }
 
     #[test]

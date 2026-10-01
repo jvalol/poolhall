@@ -3,7 +3,7 @@
 
 use blitzkit::collision::{sweep_sphere, Sphere};
 use blitzkit::physics::{step, Body};
-use glam::Vec3;
+use glam::{Quat, Vec3};
 
 use crate::shot::{self, ball};
 use crate::table::{self, BALLS};
@@ -53,8 +53,26 @@ struct Happenings {
     potted: Vec<usize>,
 }
 
+/// Adds a step's worth of spin to which way round a ball is.
+///
+/// Spin is radians a second about the axis it points along, so the turn is that
+/// axis by that many radians times the time. Renormalised every step, because a
+/// quaternion built from a thousand small multiplications drifts off the unit
+/// sphere.
+fn turned(facing: Quat, spin: Vec3, dt: f32) -> Quat {
+    let rate = spin.length();
+    if rate < 1e-6 {
+        return facing;
+    }
+
+    (Quat::from_axis_angle(spin / rate, rate * dt) * facing).normalize()
+}
+
 pub struct Run {
     pub bodies: Vec<Body>,
+    /// Which way round each ball has got to, which is its spin added up. Only
+    /// drawing reads it, and only a striped ball shows it. See spec 0002.
+    pub facing: Vec<Quat>,
     /// Which balls are off the table. The cue ball is never down for long: it
     /// comes back in hand, so it is not counted here.
     down: [bool; BALLS + 1],
@@ -81,6 +99,7 @@ impl Run {
         bodies.extend(table::rack().into_iter().map(ball));
 
         Self {
+            facing: vec![Quat::IDENTITY; bodies.len()],
             bodies,
             down: [false; BALLS + 1],
             shots: 0,
@@ -174,6 +193,7 @@ impl Run {
 
         for (n, at) in playing.iter().enumerate() {
             self.bodies[*at] = moving[n];
+            self.facing[*at] = turned(self.facing[*at], moving[n].spin, dt);
         }
 
         self.watch(&playing, &before, dt);
@@ -356,6 +376,59 @@ mod tests {
         assert_eq!(run.left(), BALLS);
         assert_eq!(run.phase(), Phase::Aiming);
         assert!(run.in_hand, "the break is from hand");
+    }
+
+    #[test]
+    fn a_new_rack_has_not_turned() {
+        let run = Run::new();
+
+        for facing in &run.facing {
+            assert_eq!(*facing, Quat::IDENTITY);
+        }
+    }
+
+    #[test]
+    fn a_rolling_ball_turns() {
+        let mut run = only(&[1]);
+        lined_up(&mut run, 1, 6.0);
+
+        run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert_ne!(run.facing[CUE], Quat::IDENTITY, "the cue ball never turned");
+        assert_ne!(run.facing[1], Quat::IDENTITY, "the one never turned");
+    }
+
+    #[test]
+    fn a_ball_turns_the_way_it_rolls() {
+        // rolling along +x turns it about -z, which is what a ball not
+        // slipping does. Spec 0030 spins it through friction and nothing else.
+        let mut run = only(&[1]);
+        lined_up(&mut run, 1, 20.0);
+
+        run.shoot(Vec3::X, shot::HARDEST * 0.4, vec2(0.0, 0.0));
+        for _ in 0..60 {
+            run.step(shot::STEP);
+        }
+
+        let (axis, angle) = run.facing[CUE].to_axis_angle();
+        let way = axis * angle;
+
+        assert!(way.z < 0.0, "it turned about {:?}", way);
+        assert!(way.x.abs() < way.z.abs(), "it turned sideways: {:?}", way);
+    }
+
+    #[test]
+    fn a_still_ball_does_not_turn() {
+        let mut run = only(&[1]);
+        lined_up(&mut run, 1, 6.0);
+        // the fifteen is parked and nothing goes near it
+        let was = run.facing[BALLS];
+
+        run.shoot(Vec3::X, shot::HARDEST * 0.3, vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert_eq!(run.facing[BALLS], was);
     }
 
     #[test]

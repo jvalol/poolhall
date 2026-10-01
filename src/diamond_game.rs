@@ -7,15 +7,17 @@ use blitzkit::keyboard::{KeyboardInput, KeyboardKey, KeyboardKeyState};
 use blitzkit::mesh::{MeshData, Transform};
 use blitzkit::mouse::{MouseButton, MouseInput};
 use blitzkit::renderer::render_text::{RenderText, TextRenderer};
-use blitzkit::renderer::scene::{MeshId, Scene};
+use blitzkit::renderer::scene::{MeshId, Scene, TextureId};
 use blitzkit::renderer::Renderer;
 use blitzkit::sound::SoundSystem;
 use blitzkit::Game;
 use glam::{vec2, vec3, vec4, Vec2, Vec3, Vec4};
 
+use crate::paint;
 use crate::rules::{Foul, Outcome, Phase, Run, CUE};
 use crate::shot::{self, HARDEST, SOFTEST};
 use crate::table::{self, BALLS, BALL_RADIUS, HALF_LONG, HALF_WIDE, POCKET_MOUTH};
+use crate::view::View;
 
 const HUD_LEFT: f32 = 20.0;
 const HUD_TOP: f32 = 20.0;
@@ -29,12 +31,6 @@ const TO_FULL: f32 = 1.2;
 /// radii a second, and how far off the middle they may take it.
 const TIP_PER_SECOND: f32 = 1.4;
 const TIP_LIMIT: f32 = 0.9;
-
-/// Where the camera sits. Straight down the table and high, because the game is
-/// read off the cloth.
-/// High and a little back from the head rail, so the whole table is in the
-/// window and the far pockets are still something you can point at.
-const EYE: Vec3 = vec3(-26.0, 42.0, 0.0);
 
 const CLOTH: Vec4 = vec4(0.13, 0.36, 0.26, 1.0);
 const RAIL: Vec4 = vec4(0.28, 0.17, 0.11, 1.0);
@@ -83,8 +79,15 @@ pub struct DiamondGame {
     nudging: [bool; 4],
     power: f32,
     charging: bool,
+    /// Where the player is standing, per spec 0003.
+    view: View,
+    /// Whether they are walking round the table, which is the right button
+    /// held: the left one is already aiming and shooting.
+    walking: bool,
     sphere: Option<MeshId>,
     block: Option<MeshId>,
+    /// One band per striped ball, in ball order from nine upwards.
+    stripes: Vec<TextureId>,
     quitting: bool,
 }
 
@@ -105,8 +108,11 @@ impl DiamondGame {
             nudging: [false; 4],
             power: 0.0,
             charging: false,
+            view: View::new(),
+            walking: false,
             sphere: None,
             block: None,
+            stripes: Vec::new(),
             quitting: false,
         }
     }
@@ -114,6 +120,15 @@ impl DiamondGame {
     /// Which way the shot goes: from the cue ball towards what is pointed at.
     pub fn way(&self) -> Vec3 {
         self.aim
+    }
+
+    /// The band this ball wears, if it wears one.
+    fn striped(&self, ball: usize) -> Option<TextureId> {
+        if !paint::is_striped(ball) {
+            return None;
+        }
+
+        self.stripes.get(paint::partner(ball)).copied()
     }
 
     fn line(&self, n: usize) -> Vec2 {
@@ -139,7 +154,7 @@ impl DiamondGame {
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
                 _ if self.run.in_hand => String::from("ball in hand: click to place it"),
-                _ => String::from("point with the mouse, hold to shoot"),
+                _ => String::from("point and hold to shoot, right drag to walk round"),
             },
             format!(
                 "arrow keys put the tip at {:+.1} across, {:+.1} up",
@@ -201,6 +216,20 @@ impl Game for DiamondGame {
     fn load(&mut self, renderer: &mut Renderer) {
         self.sphere = Some(renderer.add_mesh(&MeshData::sphere(24, 16)));
         self.block = Some(renderer.add_mesh(&MeshData::cube()));
+
+        self.stripes = (1..=BALLS)
+            .filter(|ball| paint::is_striped(*ball))
+            .map(|ball| {
+                let hue = PAINT[paint::partner(ball)];
+                let band = [
+                    (hue.x * 255.0) as u8,
+                    (hue.y * 255.0) as u8,
+                    (hue.z * 255.0) as u8,
+                ];
+
+                renderer.add_texture(&paint::stripe(band))
+            })
+            .collect();
     }
 
     fn update(
@@ -243,7 +272,7 @@ impl Game for DiamondGame {
     }
 
     fn draw(&mut self, scene: &mut Scene, camera: &mut Camera) {
-        camera.position = EYE;
+        camera.position = self.view.eye();
         camera.target = Vec3::ZERO;
 
         if let Some(cursor) = self.pointing {
@@ -308,12 +337,16 @@ impl Game for DiamondGame {
                 continue;
             }
 
-            scene.push_colored(
-                sphere,
-                &Transform::at(self.run.bodies[ball].position)
-                    .with_scale(Vec3::splat(BALL_RADIUS * 2.0)),
-                PAINT[ball - 1],
-            );
+            let at = Transform::at(self.run.bodies[ball].position)
+                .with_rotation(self.run.facing[ball])
+                .with_scale(Vec3::splat(BALL_RADIUS * 2.0));
+
+            // a striped ball is white with a band painted on, so the colour it
+            // is drawn with is white and the band comes from the texture
+            match self.striped(ball) {
+                Some(band) => scene.push_textured(sphere, band, &at, CUE_BALL, 64.0),
+                None => scene.push_colored(sphere, &at, PAINT[ball - 1]),
+            }
         }
 
         scene.push_colored(
@@ -362,6 +395,11 @@ impl Game for DiamondGame {
     }
 
     fn process_mouse(&mut self, input: MouseInput) {
+        if input.button == MouseButton::Right {
+            self.walking = input.is_pressed();
+            return;
+        }
+
         if input.button != MouseButton::Left || self.run.phase() != Phase::Aiming {
             return;
         }
@@ -391,6 +429,14 @@ impl Game for DiamondGame {
 
     fn cursor_moved(&mut self, position: Vec2) {
         self.pointing = Some(position);
+    }
+
+    /// The mouse moved in device units, which keeps arriving while a button is
+    /// held. Only the walk reads it; the aim reads where the cursor is.
+    fn mouse_motion(&mut self, delta: Vec2) {
+        if self.walking {
+            self.view.dragged(delta.x, delta.y);
+        }
     }
 
     fn is_quitting(&self) -> bool {
@@ -521,6 +567,60 @@ mod tests {
 
         game.process_mouse(let_go);
         assert_eq!(game.run.shots(), 1, "letting go did not shoot");
+    }
+
+    #[test]
+    fn the_right_button_walks_and_the_left_shoots() {
+        let mut game = DiamondGame::new();
+        let was = game.view.eye();
+
+        // the right button is the one nothing else is using
+        game.process_mouse(MouseInput::new(
+            MouseButton::Right,
+            blitzkit::mouse::ButtonState::Pressed,
+        ));
+        game.mouse_motion(vec2(120.0, 40.0));
+
+        assert_ne!(game.view.eye(), was, "the right drag did not walk");
+        assert_eq!(game.run.shots(), 0, "walking took a shot");
+
+        // and letting go stops the walk
+        game.process_mouse(MouseInput::new(
+            MouseButton::Right,
+            blitzkit::mouse::ButtonState::Released,
+        ));
+        let standing = game.view.eye();
+        game.mouse_motion(vec2(200.0, 0.0));
+
+        assert_eq!(
+            game.view.eye(),
+            standing,
+            "it kept walking after letting go"
+        );
+    }
+
+    #[test]
+    fn walking_moves_the_eye_and_not_the_table() {
+        let mut game = DiamondGame::new();
+        let mut scene = Scene::new();
+        let mut camera = Camera::new();
+
+        game.draw(&mut scene, &mut camera);
+        let was = camera.position;
+
+        game.process_mouse(MouseInput::new(
+            MouseButton::Right,
+            blitzkit::mouse::ButtonState::Pressed,
+        ));
+        game.mouse_motion(vec2(300.0, 0.0));
+        game.draw(&mut scene, &mut camera);
+
+        assert_ne!(camera.position, was, "the eye did not move");
+        assert_eq!(camera.target, Vec3::ZERO, "the table moved");
+        assert!(
+            (camera.position.length() - was.length()).abs() < 1e-2,
+            "it walked towards the table"
+        );
     }
 
     #[test]

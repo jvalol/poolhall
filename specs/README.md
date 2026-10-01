@@ -9,3 +9,5 @@ not a priority, and it never changes once a spec exists.
 | Spec | Covers |
 | --- | --- |
 | [0001](0001-the-rack.md) | The table, the rack, the rules and the shot |
+| [0002](0002-solids-and-stripes.md) | A band round seven of them, and which way round a ball is |
+| [0003](0003-round-the-table.md) | Walking round the table and stooping to it |

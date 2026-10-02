@@ -53,26 +53,10 @@ struct Happenings {
     potted: Vec<usize>,
 }
 
-/// Adds a step's worth of spin to which way round a ball is.
-///
-/// Spin is radians a second about the axis it points along, so the turn is that
-/// axis by that many radians times the time. Renormalised every step, because a
-/// quaternion built from a thousand small multiplications drifts off the unit
-/// sphere.
-fn turned(facing: Quat, spin: Vec3, dt: f32) -> Quat {
-    let rate = spin.length();
-    if rate < 1e-6 {
-        return facing;
-    }
-
-    (Quat::from_axis_angle(spin / rate, rate * dt) * facing).normalize()
-}
-
 pub struct Run {
     pub bodies: Vec<Body>,
     /// Which way round each ball has got to, which is its spin added up. Only
     /// drawing reads it, and only a striped ball shows it. See spec 0002.
-    pub facing: Vec<Quat>,
     /// Which balls are off the table. The cue ball is never down for long: it
     /// comes back in hand, so it is not counted here.
     down: [bool; BALLS + 1],
@@ -99,7 +83,6 @@ impl Run {
         bodies.extend(table::rack().into_iter().map(ball));
 
         Self {
-            facing: vec![Quat::IDENTITY; bodies.len()],
             bodies,
             down: [false; BALLS + 1],
             shots: 0,
@@ -126,6 +109,12 @@ impl Run {
 
     pub fn is_down(&self, ball: usize) -> bool {
         self.down.get(ball).copied().unwrap_or(false)
+    }
+
+    /// Which way a ball is facing. The engine turns a body by its spin as of
+    /// spec 0034, so this reads what it did rather than repeating it here.
+    pub fn facing(&self, ball: usize) -> Quat {
+        self.bodies[ball].orientation
     }
 
     pub fn cue(&self) -> Vec3 {
@@ -205,7 +194,6 @@ impl Run {
 
         for (n, at) in playing.iter().enumerate() {
             self.bodies[*at] = moving[n];
-            self.facing[*at] = turned(self.facing[*at], moving[n].spin, dt);
         }
 
         self.watch(&playing, &before, dt);
@@ -394,8 +382,8 @@ mod tests {
     fn a_new_rack_has_not_turned() {
         let run = Run::new();
 
-        for facing in &run.facing {
-            assert_eq!(*facing, Quat::IDENTITY);
+        for ball in 0..=BALLS {
+            assert_eq!(run.facing(ball), Quat::IDENTITY);
         }
     }
 
@@ -407,8 +395,8 @@ mod tests {
         run.shoot(Vec3::X, shot::HARDEST, vec2(0.0, 0.0));
         settle(&mut run);
 
-        assert_ne!(run.facing[CUE], Quat::IDENTITY, "the cue ball never turned");
-        assert_ne!(run.facing[1], Quat::IDENTITY, "the one never turned");
+        assert_ne!(run.facing(CUE), Quat::IDENTITY, "the cue ball never turned");
+        assert_ne!(run.facing(1), Quat::IDENTITY, "the one never turned");
     }
 
     #[test]
@@ -423,7 +411,7 @@ mod tests {
             run.step(shot::STEP);
         }
 
-        let (axis, angle) = run.facing[CUE].to_axis_angle();
+        let (axis, angle) = run.facing(CUE).to_axis_angle();
         let way = axis * angle;
 
         assert!(way.z < 0.0, "it turned about {:?}", way);
@@ -435,12 +423,12 @@ mod tests {
         let mut run = only(&[1]);
         lined_up(&mut run, 1, 6.0);
         // the fifteen is parked and nothing goes near it
-        let was = run.facing[BALLS];
+        let was = run.facing(BALLS);
 
         run.shoot(Vec3::X, shot::HARDEST * 0.3, vec2(0.0, 0.0));
         settle(&mut run);
 
-        assert_eq!(run.facing[BALLS], was);
+        assert_eq!(run.facing(BALLS), was);
     }
 
     #[test]

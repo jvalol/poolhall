@@ -338,7 +338,7 @@ impl Game for PoolhallGame {
             }
 
             let at = Transform::at(self.run.bodies[ball].position)
-                .with_rotation(self.run.facing[ball])
+                .with_rotation(self.run.facing(ball))
                 .with_scale(Vec3::splat(BALL_RADIUS * 2.0));
 
             // a striped ball is white with a band painted on, so the colour it

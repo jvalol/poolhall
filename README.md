@@ -8,3 +8,7 @@ engine.
 ```
 cargo run
 ```
+
+---
+
+I asked AI to draft this for me. I've edited it. Any surviving AI smells are my oversight.

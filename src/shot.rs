@@ -28,8 +28,8 @@ pub const LONGEST: usize = (30.0 / STEP) as usize;
 ///
 /// Twelve rather than anything larger. blitzkit's settling speed is a fixed
 /// 0.6 and gravity puts `g * dt` back into a resting body every step, so at 24
-/// that is a third of the threshold and a ball sits trembling on the cloth for
-/// ever. carom found that the slow way.
+/// that is a third of the threshold and a ball trembles on the cloth for ever.
+/// carom found that the slow way.
 pub const GRAVITY: Vec3 = vec3(0.0, -12.0, 0.0);
 
 /// How much of a collision comes back.

@@ -18,12 +18,11 @@ carom put one sphere against another and asked where it would go. This asks the
 harder half of the same question: where does the thing you hit it *with* go, and
 can you choose.
 
-That became possible an hour ago. blitzkit spec 0032 lets a game strike a body
-off its middle, so a ball can be sent with backspin or topspin, and spec 0030's
-contact friction turns that into a cue ball that comes back, stops dead, or runs
-on. Measured in 0032: struck at the bottom a ball ends up behind where it met the
-one it hit, dead centre it ends well past, and every height between falls in
-order. That range is the game.
+That became possible an hour ago. Spec 0032 lets a game strike a body off its
+middle, and spec 0030's contact friction turns that into a cue ball that comes
+back, stops dead, or runs on. Measured in 0032: struck at the bottom a ball
+ends up behind where it met the one it hit, dead centre it ends well past, and
+every height between falls in order. That range is the game.
 
 Without 0032 this is a geometry puzzle where the cue ball always stops in the
 same place. With it, every shot has a second half.
@@ -91,20 +90,20 @@ through a special case in the rules. The cloth under them is one piece with an
 apron past the rails, and a ball is potted by reaching the jaws rather than by
 falling through a hole.
 
-That is a change from what this spec first said, which was holes in the cloth and
-a ball caught on the way down. Prettier, and it is also exactly how carom lost
-half a minute a shot: a body with nothing under it falls for ever, a falling body
-is a body still moving, and the shot never ends. There is no sense building the
-same trap twice to see if it still works.
+That is a change from what this spec first said, which was holes in the cloth
+and a ball caught on the way down. Prettier, and how carom lost half a minute a
+shot. A body with nothing under it falls for ever, a falling body is still
+moving, and the shot never ends. There is no sense building the same trap twice
+to see if it still works.
 
-**A ball meets a cushion if its path meets one**, swept along where it was going
-rather than looked for where it ended up. Two wrong answers came first. Asking
-whether a ball is near a rail misses it, because a ball bounces inside the step
-it touches and never ends one at touching distance: the closest a measured one
-got was 0.536 against a ball radius of 0.5. Sweeping from where it was to where
-it ended up misses it too, because a step containing a bounce has a net
-displacement pointing away from the rail. Where it was and where it was going is
-the path `through_the_world` sweeps, and `sweep_sphere` is what it sweeps with.
+**A ball meets a cushion if its path meets one**, swept along where it was
+going rather than looked for where it ended up. Two wrong answers came first.
+Asking whether a ball is near a rail misses it. A ball bounces inside the step
+it touches and never ends one at touching distance: the closest measured was
+0.536 against a radius of 0.5. Sweeping from where it was to where it ended up
+misses it too, because a step containing a bounce has a net displacement
+pointing away from the rail. Where it was and where it was going is the path
+`through_the_world` sweeps, and `sweep_sphere` is what it sweeps with.
 
 **A potted ball comes off the table in the step it reaches the jaws**, not when
 the shot ends. Past the cushions there is apron and then nothing, so a ball left
@@ -114,17 +113,15 @@ wrong when the rules were first written, and sixteen test breaks found it.
 ## What it asks of blitzkit
 
 **Cushions that are not made of ball.** Restitution and friction live on the
-body, and the static world has none, so a rail returns exactly as much as another
-ball does. Real cushions return around three quarters and ball on ball around
-nineteen twentieths, which is not a small difference: it is the difference
-between a cue ball that dies on the rail and one that comes back off it across
-the table.
+body, and the static world has none, so a rail returns exactly as much as
+another ball does. Real cushions return around three quarters and ball on ball
+around nineteen twentieths. That is the difference between a cue ball that dies
+on the rail and one that comes back across the table.
 
-The workaround is to pick one and live with it, and this spec says up front which
-way it will lean: ball on ball is what the player is aiming with, so the number
-goes there, and the rails bounce too hard until the engine can say otherwise.
-That is a spec of its own, materials on the static world, and this game is the
-one asking for it.
+The workaround is to pick one and live with it. Ball on ball is what the player
+aims with, so the number goes there, and the rails bounce too hard until the
+engine can say otherwise. That is a spec of its own, materials on the static
+world, and this game is the one asking for it.
 
 **Nothing else.** Striking, rolling resistance, cursor rays, sphere against
 sphere and the swept world are all there and all released.
@@ -144,11 +141,11 @@ Both are written in blitzkit spec 0032 and neither is a surprise.
 
 ## The numbers are measured, not reasoned
 
-carom's table was sized by working out how far a shot travels, and the working
-was wrong by more than a factor of two, which cost half a minute a shot until
-somebody played it. Every number here that could be worked out will be measured
-by a test instead: how far a ball runs at full speed, how long the longest shot
-takes, how much draw a given cloth leaves by the time the balls meet.
+carom's table was sized by working out how far a shot travels. The working was
+wrong by more than a factor of two, and it cost half a minute a shot until
+somebody played it. Every number here that could be worked out is measured by a
+test instead: how far a ball runs at full speed, how long the longest shot
+takes, how much draw a cloth leaves.
 
 ## Acceptance criteria
 

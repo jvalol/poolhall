@@ -25,13 +25,13 @@ pub const BACK_PER_NOTCH: f32 = 0.018;
 /// Nearly flat to the cloth at one end and nearly straight down at the other,
 /// which is a hair under five degrees and a hair under ninety.
 ///
-/// Not flat, because a view along the cloth never meets it and there is nowhere
-/// to point. Not exactly straight down either, and the reason this spec first
-/// gave for that was wrong: it said the aim beads would be a dot, when the
-/// beads lie on the cloth and a plan view is the clearest look at an angle
-/// there is. The real reason is the arithmetic. The eye looks along the up
-/// axis from directly over the table, and a view matrix built from two
-/// parallel vectors is nothing at all.
+/// Not flat, because a view along the cloth never meets it and there is
+/// nowhere to point. Not exactly straight down either. The reason this spec
+/// first gave was wrong: it said the aim beads would be a dot, when the beads
+/// lie on the cloth and a plan view is the clearest look at an angle there is.
+/// The real reason is the arithmetic. The eye looks along the up axis from
+/// directly over the table, and a view matrix built from two parallel vectors
+/// is nothing at all.
 pub const LOWEST: f32 = 0.08;
 pub const HIGHEST: f32 = 1.55;
 

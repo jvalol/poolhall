@@ -89,6 +89,13 @@ pub struct PoolhallGame {
     /// One band per striped ball, in ball order from nine upwards.
     stripes: Vec<TextureId>,
     quitting: bool,
+    /// Whether this run is only here to be photographed, and whether the break
+    /// has been taken. See `refresh-screenshots` in the project above.
+    ///
+    /// The opening frame is a rack and a cue ball, which is a photograph of a
+    /// table nobody has played on. The break is what a pool table looks like.
+    staged: bool,
+    broken: bool,
 }
 
 impl Default for PoolhallGame {
@@ -114,6 +121,8 @@ impl PoolhallGame {
             block: None,
             stripes: Vec::new(),
             quitting: false,
+            staged: crate::staged(),
+            broken: false,
         }
     }
 
@@ -133,6 +142,38 @@ impl PoolhallGame {
 
     fn line(&self, n: usize) -> Vec2 {
         vec2(HUD_LEFT, HUD_TOP + n as f32 * HUD_APART)
+    }
+
+    /// How hard the staged break is and how long it is given to settle.
+    const POSED_SETTLES_FOR: f32 = 12.0;
+
+    /// Breaks the rack for the camera and lets it come to rest. See
+    /// `refresh-screenshots`.
+    ///
+    /// On the first frame rather than over twelve real seconds, because the
+    /// shutter is on a timer and will not wait for fifteen balls to stop.
+    fn pose(&mut self) {
+        self.broken = true;
+
+        // up the table into the apex, a little off square. Measured over power
+        // and angle: dead on leaves the readout saying "foul: nothing reached
+        // a cushion", and at six hundredths the cue ball goes down. Full power
+        // at four hundredths breaks clean and fouls nothing.
+        let cue = self.run.cue();
+        let apex = Vec3::new(0.0, cue.y, 0.0);
+        let way = (apex - cue).normalize_or_zero();
+        let across = Vec3::new(way.z, 0.0, -way.x);
+        self.run.shoot(
+            (way + across * 0.04).normalize(),
+            shot::HARDEST,
+            glam::Vec2::ZERO,
+        );
+
+        let mut at = 0.0;
+        while at < Self::POSED_SETTLES_FOR {
+            self.run.step(shot::STEP);
+            at += shot::STEP;
+        }
     }
 
     fn readout(&self) -> Vec<String> {
@@ -240,6 +281,22 @@ impl Game for PoolhallGame {
         _sound_system: &SoundSystem,
     ) {
         text_renderer.reset();
+
+        if self.staged {
+            if !self.broken {
+                self.pose();
+            }
+            for (n, text) in self.readout().into_iter().enumerate() {
+                text_renderer.push_render_text(RenderText {
+                    position: self.line(n),
+                    color: vec4(1.0, 1.0, 1.0, 0.9),
+                    size: HUD_SIZE,
+                    text,
+                    ..Default::default()
+                });
+            }
+            return;
+        }
 
         let across = (self.nudging[3] as i32 - self.nudging[2] as i32) as f32;
         let up = (self.nudging[0] as i32 - self.nudging[1] as i32) as f32;

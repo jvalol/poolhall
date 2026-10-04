@@ -10,6 +10,12 @@ mod view;
 use blitzkit::start;
 use poolhall_game::PoolhallGame;
 
+/// Whether this run is only here to be photographed, for `refresh-screenshots`
+/// in the project above.
+pub fn staged() -> bool {
+    std::env::args().any(|arg| arg == "--screenshot")
+}
+
 fn main() {
     start("poolhall", Box::new(PoolhallGame::new()));
 }

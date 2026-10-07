@@ -48,6 +48,13 @@ const POCKET: Vec4 = vec4(0.03, 0.04, 0.05, 1.0);
 const CUE_BALL: Vec4 = vec4(0.97, 0.96, 0.92, 1.0);
 const AIM: Vec4 = vec4(1.0, 0.95, 0.75, 1.0);
 
+/// The head string, drawn while the break is being placed.
+///
+/// Chalk on baize rather than paint: a real table marks it with two diamonds
+/// and nothing across the cloth, but two diamonds are no help at all when the
+/// question is whether the ball under your hand is behind the line.
+const LINE: Vec4 = vec4(0.72, 0.78, 0.74, 1.0);
+
 /// What each numbered ball is painted, one through fifteen.
 ///
 /// Seven hues, the eight in black, and the same seven again paler for the
@@ -93,6 +100,9 @@ pub struct PoolhallGame {
     charging: bool,
     /// Where the player is standing, per spec 0003.
     view: View,
+    /// Whether the cue ball is in the hand and being moved, which is the left
+    /// button held down after taking hold of it.
+    carrying: bool,
     /// Whether shift is held, which gives each key its second job: the arrows
     /// put the cue tip instead of sliding, and W and S stand you up instead of
     /// leaning you in.
@@ -131,6 +141,7 @@ impl PoolhallGame {
             power: 0.0,
             charging: false,
             view: View::new(),
+            carrying: false,
             sliding: false,
             sphere: None,
             block: None,
@@ -150,6 +161,18 @@ impl PoolhallGame {
     /// number.
     fn face(&self, ball: usize) -> Option<TextureId> {
         self.faces.get(ball - 1).copied()
+    }
+
+    /// Whether the cursor is over the cue ball, which is what you take hold of.
+    fn on_the_cue_ball(&self) -> bool {
+        let Some(at) = self.aimed_at else {
+            return false;
+        };
+        let cue = self.run.cue();
+
+        // a little wider than the ball, because a ball is a small thing to hit
+        // with a cursor and missing it does nothing at all
+        (vec3(at.x, cue.y, at.z) - cue).length() <= BALL_RADIUS * 1.6
     }
 
     /// The hue a ball is painted. A striped one takes the one seven below it,
@@ -254,7 +277,10 @@ impl PoolhallGame {
             format!("{}, {}", left, shots(self.run.shots())),
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
-                _ if self.run.in_hand => String::from("ball in hand: click to place it"),
+                _ if self.run.kitchen_only() => {
+                    String::from("drag the cue ball behind the line to break")
+                }
+                _ if self.run.in_hand => String::from("ball in hand: drag the cue ball anywhere"),
                 _ => String::from("point and hold to shoot. wasd walks, arrows slide"),
             },
             format!(
@@ -395,6 +421,13 @@ impl Game for PoolhallGame {
             self.aimed_at = on_the_cloth(camera, cursor);
         }
 
+        // the ball follows the hand that has hold of it
+        if self.carrying {
+            if let Some(at) = self.aimed_at {
+                self.run.carry_to(vec3(at.x, BALL_RADIUS, at.z));
+            }
+        }
+
         if let Some(at) = self.aimed_at {
             let off = at - self.run.cue();
             let way = vec3(off.x, 0.0, off.z);
@@ -420,6 +453,21 @@ impl Game for PoolhallGame {
             CLOTH,
             CLOTH_SHEEN,
         );
+
+        // the head string, while it is the line you have to break from behind.
+        // A kitchen you cannot see is a rule you cannot follow: without this
+        // the click simply did nothing and the table said nothing about why.
+        if self.run.kitchen_only() {
+            scene.push_colored(
+                block,
+                &Transform::at(vec3(table::head_string(), 0.004, 0.0)).with_scale(vec3(
+                    0.12,
+                    0.008,
+                    table::HALF_WIDE * 2.0,
+                )),
+                LINE,
+            );
+        }
 
         for rail in table::cushions() {
             let size = rail.max - rail.min;
@@ -522,12 +570,16 @@ impl Game for PoolhallGame {
             return;
         }
 
-        // in hand, a click puts the cue ball down rather than shooting
+        // in hand, the ball is picked up and carried rather than teleported.
+        // Clicking the cloth put it wherever the cursor happened to be, which
+        // moved it on any stray click and gave no way to try a spot and think
+        // better of it.
         if self.run.in_hand {
             if input.is_pressed() {
-                if let Some(at) = self.aimed_at {
-                    self.run.place(vec3(at.x, BALL_RADIUS, at.z));
-                }
+                self.carrying = self.on_the_cue_ball();
+            } else if self.carrying {
+                self.carrying = false;
+                self.run.place(self.run.cue());
             }
             return;
         }
@@ -659,34 +711,40 @@ mod tests {
         assert!(!game.charging, "it started winding up while in hand");
     }
 
+    /// Spec 0001: the cue ball is taken hold of and carried, and letting go
+    /// puts it down. Every click used to put it wherever the cursor happened
+    /// to be, so nothing ever got as far as winding up a shot and a stray
+    /// click moved the ball.
     #[test]
-    fn placing_the_cue_ball_lets_the_next_click_shoot() {
-        // every click used to put the ball down again, so nothing ever got as
-        // far as winding up a shot
+    fn the_cue_ball_is_carried_and_put_down() {
         let mut game = PoolhallGame::new();
-        let mut scene = Scene::new();
-        let mut camera = Camera::new();
-        game.cursor_moved(vec2(0.45, 0.55));
-        game.draw(&mut scene, &mut camera);
-
         let press = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Pressed);
         let let_go = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Released);
 
+        // a press away from the ball takes hold of nothing
+        game.aimed_at = Some(vec3(-16.0, BALL_RADIUS, 6.0));
         game.process_mouse(press);
-        assert!(
-            !game.run.in_hand,
-            "it is still in hand after being put down"
-        );
+        assert!(!game.carrying, "it took hold of the cloth");
+        game.process_mouse(let_go);
+        assert!(game.run.in_hand, "a press on the cloth put the ball down");
+
+        // a press on the ball picks it up, and it is still in hand
+        game.aimed_at = Some(game.run.cue());
+        game.process_mouse(press);
+        assert!(game.carrying, "it did not take hold of the ball");
+        assert!(game.run.in_hand, "taking hold of it put it down");
+
+        // and letting go puts it down without taking a shot
+        game.process_mouse(let_go);
+        assert!(!game.carrying, "it is still being carried");
+        assert!(!game.run.in_hand, "letting go did not put it down");
         assert_eq!(game.run.shots(), 0, "putting it down took a shot");
 
+        // after which a press winds up a shot
         game.process_mouse(press);
         assert!(game.charging, "the next press did not wind up a shot");
-
-        game.process_mouse(let_go);
-        assert_eq!(game.run.shots(), 1, "letting go did not shoot");
     }
 
-    /// Spec 0003: the keys walk you round and the mouse is left to aim.
     #[test]
     fn the_keys_walk_and_the_mouse_is_for_the_shot() {
         let mut game = PoolhallGame::new();

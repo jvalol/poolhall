@@ -142,9 +142,40 @@ impl Run {
         (1..=BALLS).filter(|ball| !self.down[*ball]).count()
     }
 
+    /// Whether the cue ball may be put here.
+    ///
+    /// Free of the other balls and on the table, and behind the head string if
+    /// nothing has been struck yet. You break from the kitchen; after that a
+    /// scratch is ball in hand and the whole table is yours.
+    pub fn may_place(&self, at: Vec3) -> bool {
+        self.is_free(at) && (self.shots > 0 || table::in_the_kitchen(at))
+    }
+
+    /// Whether the placing now on offer is kitchen only, which is the break
+    /// and nothing else.
+    pub fn kitchen_only(&self) -> bool {
+        self.in_hand && self.shots == 0
+    }
+
+    /// Slides the cue ball along the cloth while it is being carried.
+    ///
+    /// Unlike `place`, this does not put it down: it is the ball following
+    /// your hand, and it stays in hand until you let go. A spot it may not
+    /// have leaves it where it was, so the ball sticks at the edge of what is
+    /// allowed rather than vanishing or following you off the table.
+    pub fn carry_to(&mut self, at: Vec3) {
+        if !self.in_hand || self.phase != Phase::Aiming || !self.may_place(at) {
+            return;
+        }
+
+        self.bodies[CUE].position = at;
+        self.bodies[CUE].velocity = Vec3::ZERO;
+        self.bodies[CUE].spin = Vec3::ZERO;
+    }
+
     /// Puts the cue ball somewhere, which is only allowed in hand.
     pub fn place(&mut self, at: Vec3) {
-        if !self.in_hand || self.phase != Phase::Aiming || !self.is_free(at) {
+        if !self.in_hand || self.phase != Phase::Aiming || !self.may_place(at) {
             return;
         }
 
@@ -654,13 +685,13 @@ mod tests {
         let mut run = only(&[1]);
         assert!(run.in_hand, "the break is from hand");
 
-        run.place(vec3(-5.0, table::BALL_RADIUS, 2.0));
+        run.place(vec3(-15.0, table::BALL_RADIUS, 2.0));
 
         assert!(!run.in_hand, "it is still in hand after being put down");
 
         // and a second click does not pick it up again
         let down = run.cue();
-        run.place(vec3(1.0, table::BALL_RADIUS, 1.0));
+        run.place(vec3(-14.0, table::BALL_RADIUS, 1.0));
 
         assert_eq!(run.cue(), down, "a later click moved it");
     }
@@ -683,9 +714,12 @@ mod tests {
 
     #[test]
     fn the_cue_ball_cannot_be_put_down_inside_another() {
-        let mut run = Run::new();
+        let mut run = only(&[1]);
         let on_the_spot = run.cue();
-        let one = run.bodies[1].position;
+        // in the kitchen, because that is where the break is placed from and
+        // the rack is the far side of the line
+        let one = vec3(-16.0, table::BALL_RADIUS, 0.0);
+        run.bodies[1].position = one;
 
         run.place(one);
         assert_eq!(run.cue(), on_the_spot, "it went down inside the one");
@@ -694,6 +728,57 @@ mod tests {
         let beside = one - Vec3::X * table::BALL_RADIUS * 2.2;
         run.place(beside);
         assert_eq!(run.cue(), beside);
+    }
+
+    /// Spec 0001: the break is from the kitchen, and a scratch is not.
+    #[test]
+    fn the_break_is_from_behind_the_head_string() {
+        let mut run = Run::new();
+        assert!(run.kitchen_only(), "the break is not from the kitchen");
+
+        let up_table = vec3(0.0, table::BALL_RADIUS, 0.0);
+        assert!(!run.may_place(up_table), "the break may be placed up table");
+        run.place(up_table);
+        assert!(run.in_hand, "an illegal placing put the ball down anyway");
+
+        let behind = vec3(-15.0, table::BALL_RADIUS, 2.0);
+        assert!(run.may_place(behind), "the kitchen is refused");
+        run.place(behind);
+        assert_eq!(run.cue(), behind);
+
+        // and after a scratch the whole table is yours. The object balls go
+        // away first, so this asks about the head string and not about which
+        // bit of cloth a broken rack happens to be sitting on.
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+        settle(&mut run);
+        for ball in 1..=BALLS {
+            run.down[ball] = true;
+        }
+        run.in_hand = true;
+
+        assert!(!run.kitchen_only(), "a scratch is still kitchen only");
+        assert!(
+            run.may_place(vec3(table::HALF_LONG * 0.5, table::BALL_RADIUS, 0.0)),
+            "ball in hand is still refused up table"
+        );
+    }
+
+    /// Spec 0001: and carrying it does not put it down.
+    #[test]
+    fn carrying_the_cue_ball_keeps_it_in_hand() {
+        let mut run = Run::new();
+        let behind = vec3(-15.0, table::BALL_RADIUS, 2.0);
+
+        run.carry_to(behind);
+        assert_eq!(run.cue(), behind, "it did not follow");
+        assert!(run.in_hand, "carrying it put it down");
+
+        // and a spot it may not have leaves it where it was
+        run.carry_to(vec3(0.0, table::BALL_RADIUS, 0.0));
+        assert_eq!(run.cue(), behind, "it followed past the head string");
+
+        run.place(run.cue());
+        assert!(!run.in_hand, "letting go did not put it down");
     }
 
     #[test]

@@ -142,7 +142,24 @@ pub fn foot_spot() -> Vec3 {
 
 /// Where the cue ball breaks from: a quarter of the table from the head rail.
 pub fn head_spot() -> Vec3 {
-    vec3(-HALF_LONG * 0.5, BALL_RADIUS, 0.0)
+    vec3(head_string(), BALL_RADIUS, 0.0)
+}
+
+/// Where the head string runs, which is the line the kitchen ends at.
+///
+/// A quarter of the way up the table from the head rail, which is where it is
+/// on a real one and where the head spot has always sat.
+pub fn head_string() -> f32 {
+    -HALF_LONG * 0.5
+}
+
+/// Whether a spot is in the kitchen: on the table, and behind the head string.
+///
+/// On the line counts as behind it, the way it does in the hand: a ball split
+/// by the line is in, and the head spot itself is the obvious place to break
+/// from.
+pub fn in_the_kitchen(at: Vec3) -> bool {
+    is_on_the_table(at) && at.x <= head_string()
 }
 
 /// The rack, as a position for each ball from one to fifteen.

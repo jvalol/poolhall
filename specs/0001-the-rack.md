@@ -91,6 +91,32 @@ wash across the middle of a surface fifty units across and the cloth read as wet
 vinyl. The number is high enough that the highlight closes to nothing, which is
 how you say matte with the one number there is.
 
+**The break is from the kitchen, and a scratch is ball in hand.** The kitchen
+is the quarter of the table behind the head string, which is where the head
+spot has always been. Before a ball has been struck the cue ball may only go
+there; after that the whole table is yours, which is the modern rule and the
+harsher of the two.
+
+On the line counts as behind it, so the head spot itself is a legal break.
+
+The head string is drawn across the cloth while that is the rule and not
+otherwise. A real table marks it with two diamonds and nothing across the
+baize, and two diamonds are no help when the question is whether the ball under
+your hand is behind the line. A kitchen you cannot see is a rule you cannot
+follow: without the line the click simply did nothing and the table said
+nothing about why.
+
+**The cue ball is taken hold of and carried, not clicked into place.** Press on
+the ball, move it, let go. Clicking the cloth put it wherever the cursor
+happened to be, so a stray click moved it and there was no way to try a spot
+and think better of it. The cursor has to land within about a ball and a half
+of it, because a ball is a small thing to hit with a cursor and missing it does
+nothing at all.
+
+Carrying it does not put it down: a spot it may not have leaves the ball where
+it was, so it sticks at the head string rather than following your hand over
+it. Letting go is what ends being in hand.
+
 **The cushions are gaps. The cloth is not.** Six lengths of rail with a space at
 every pocket, so a ball on its way to one goes between real geometry rather than
 through a special case in the rules. The cloth under them is one piece with an
@@ -182,6 +208,9 @@ takes, how much draw a cloth leaves.
 - Any ball may be hit first. — `rules::tests::any_ball_first_is_legal`
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
 - Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
+- The break is from behind the head string, and a scratch is not. — `rules::tests::the_break_is_from_behind_the_head_string`
+- Carrying the cue ball does not put it down. — `rules::tests::carrying_the_cue_ball_keeps_it_in_hand`
+- It is taken hold of and carried, and letting go puts it down. — `poolhall_game::tests::the_cue_ball_is_carried_and_put_down`
 - No cushion after contact is a foul. — `rules::tests::no_rail_after_contact_is_a_foul`
 - But a break is not one, because a ball that arrives slowly still arrives. — `rules::tests::a_break_is_not_a_foul`
 - A foul costs a shot and gives ball in hand. — `rules::tests::a_foul_costs_a_shot_and_the_cue_ball`
@@ -202,7 +231,6 @@ takes, how much draw a cloth leaves.
 - The arrow keys move the tip and keep it on the ball. — `poolhall_game::tests::the_arrow_keys_move_the_tip_and_stay_on_the_ball`
 - Space puts it back in the middle. — `poolhall_game::tests::space_puts_the_tip_back_in_the_middle`
 - In hand, a click places the cue ball rather than shooting. — `poolhall_game::tests::in_hand_a_click_places_the_cue_ball_rather_than_shooting`
-- And the click after that winds up a shot and takes it. — `poolhall_game::tests::placing_the_cue_ball_lets_the_next_click_shoot`
 - Putting it down ends being in hand, and a later click does not pick it up. — `rules::tests::putting_it_down_ends_being_in_hand`
 - It cannot be put down past the rails or over a pocket. — `rules::tests::the_cue_ball_cannot_be_put_down_off_the_table`
 - Nor inside a ball already on the table. — `rules::tests::the_cue_ball_cannot_be_put_down_inside_another`

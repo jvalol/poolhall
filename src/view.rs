@@ -44,16 +44,16 @@ pub const HIGHEST: f32 = 1.55;
 pub const FROM: f32 = -std::f32::consts::FRAC_PI_2;
 pub const ABOVE: f32 = 0.95;
 
-/// How fast dragging moves it, in radians a pixel.
-pub const TURN_PER_PIXEL: f32 = 0.006;
-pub const RISE_PER_PIXEL: f32 = 0.004;
-
-/// How fast panning moves it, as a share of how far out the eye is per pixel.
+/// How fast the keys move it, per second held.
 ///
-/// A share and not a distance, for the reason a zoom notch is: panning from
-/// close up wants small steps and panning from across the room wants large
-/// ones, and one fixed number is wrong at both ends.
-pub const PAN_PER_PIXEL: f32 = 0.0016;
+/// Walking round is a plain rate: a touch under a quarter turn a second, so
+/// crossing to the far side of the table takes about two. Leaning is a share
+/// of where the eye already is, the same shape as a notch of the wheel and for
+/// the same reason, and sliding is a share of how far out it is.
+pub const TURN_PER_SECOND: f32 = 1.4;
+pub const BACK_PER_SECOND: f32 = 0.9;
+pub const PAN_PER_SECOND: f32 = 0.55;
+pub const RISE_PER_SECOND: f32 = 0.9;
 
 /// How far off the middle of the table the eye may look, in table halves.
 ///
@@ -97,12 +97,6 @@ impl View {
         }
     }
 
-    /// Walks round by a drag of this many pixels.
-    pub fn dragged(&mut self, across: f32, down: f32) {
-        self.about -= across * TURN_PER_PIXEL;
-        self.above = (self.above + down * RISE_PER_PIXEL).clamp(LOWEST, HIGHEST);
-    }
-
     /// Leans in or out by this many notches of the wheel.
     ///
     /// A share of where it is rather than a fixed distance, so a notch moves it
@@ -112,18 +106,34 @@ impl View {
         self.back = (self.back * (1.0 - notches * BACK_PER_NOTCH)).clamp(CLOSEST, FURTHEST);
     }
 
-    /// Slides what it is looking at, by a drag of this many pixels.
+    /// Walks round the table and leans in and out, by the keys held.
     ///
-    /// Along the cloth and in the eye's own directions, so dragging right moves
-    /// the table right whichever side you are standing on. Up the screen is
-    /// away from you, which is the ground going under the drag rather than the
-    /// camera going over it: the other way round reads as pushing the table.
-    pub fn panned(&mut self, across: f32, down: f32, half: Vec2) {
-        let by = self.back * PAN_PER_PIXEL;
-        let away = vec3(self.about.sin(), 0.0, self.about.cos());
-        let right = vec3(away.z, 0.0, -away.x);
+    /// `round` and `inout` are each minus one, nought or one. Held keys and not
+    /// a drag, so these are rates a second rather than a step a press: a key
+    /// that moves the eye a fixed amount per press is a key you hammer.
+    pub fn walked(&mut self, round: f32, inout: f32, dt: f32) {
+        self.about -= round * TURN_PER_SECOND * dt;
+        self.back = (self.back * (1.0 - inout * BACK_PER_SECOND * dt)).clamp(CLOSEST, FURTHEST);
+    }
 
-        self.at += right * (-across * by) + away * (-down * by);
+    /// Stands up or stoops, by the keys held.
+    ///
+    /// Shift and the same two keys that lean in and out, because walking round
+    /// and standing up are the two halves of where you are and this scheme had
+    /// no room left for a pair of its own.
+    pub fn stooped(&mut self, by: f32, dt: f32) {
+        self.above = (self.above + by * RISE_PER_SECOND * dt).clamp(LOWEST, HIGHEST);
+    }
+
+    /// Slides what it is looking at, by the keys held.
+    ///
+    /// The same move as a shift drag, in the eye's own directions, at a rate.
+    pub fn slid(&mut self, across: f32, away: f32, dt: f32, half: Vec2) {
+        let by = self.back * PAN_PER_SECOND * dt;
+        let out = vec3(self.about.sin(), 0.0, self.about.cos());
+        let right = vec3(out.z, 0.0, -out.x);
+
+        self.at += right * (across * by) + out * (-away * by);
         self.at.x = self.at.x.clamp(-half.x * ROAM, half.x * ROAM);
         self.at.z = self.at.z.clamp(-half.y * ROAM, half.y * ROAM);
         self.at.y = 0.0;
@@ -174,7 +184,7 @@ mod tests {
         let mut view = View::new();
         let was = view.at;
 
-        view.panned(120.0, 0.0, half);
+        view.slid(1.0, 0.0, 0.25, half);
 
         assert_ne!(view.at, was, "the pan did nothing");
         assert_eq!(view.at.y, 0.0, "it left the cloth: {:?}", view.at);
@@ -196,8 +206,8 @@ mod tests {
         let mut beside = View::new();
         beside.about = 0.0;
 
-        behind.panned(100.0, 0.0, half);
-        beside.panned(100.0, 0.0, half);
+        behind.slid(1.0, 0.0, 0.25, half);
+        beside.slid(1.0, 0.0, 0.25, half);
 
         assert_ne!(
             behind.at, beside.at,
@@ -205,19 +215,19 @@ mod tests {
         );
     }
 
-    /// Spec 0003: and it cannot be panned off into the black.
+    /// Spec 0003: and it cannot be slid off into the black.
     #[test]
     fn panning_stops_at_the_edge_of_the_table() {
         let half = glam::vec2(25.0, 14.0);
         let mut view = View::new();
 
         for _ in 0..500 {
-            view.panned(400.0, 400.0, half);
+            view.slid(1.0, 1.0, 0.25, half);
         }
 
         assert!(
             view.at.x.abs() <= half.x * ROAM + 1e-3 && view.at.z.abs() <= half.y * ROAM + 1e-3,
-            "it panned to {:?}, which is off the table",
+            "it slid to {:?}, which is off the table",
             view.at
         );
     }
@@ -227,7 +237,7 @@ mod tests {
         let mut view = View::new();
         let was = view.eye();
 
-        view.dragged(200.0, 0.0);
+        view.walked(1.0, 0.0, 0.5);
         let now = view.eye();
 
         assert_ne!(now, was, "the drag did nothing");
@@ -246,20 +256,20 @@ mod tests {
         let mut view = View::new();
         let was = view.eye();
 
-        view.dragged(std::f32::consts::TAU / TURN_PER_PIXEL, 0.0);
+        view.walked(1.0, 0.0, std::f32::consts::TAU / TURN_PER_SECOND);
 
         assert!((view.eye() - was).length() < 1e-2, "{:?}", view.eye());
     }
 
     #[test]
-    fn dragging_up_and_down_changes_the_height() {
+    fn standing_up_and_stooping_changes_the_height() {
         let mut view = View::new();
         let was = view.eye().y;
 
-        view.dragged(0.0, 100.0);
+        view.stooped(1.0, 0.4);
         assert!(view.eye().y > was, "it did not rise");
 
-        view.dragged(0.0, -300.0);
+        view.stooped(-1.0, 1.2);
         assert!(view.eye().y < was, "it did not stoop");
     }
 
@@ -325,7 +335,7 @@ mod tests {
     fn it_stops_a_hair_short_of_flat_and_of_straight_down() {
         let mut view = View::new();
 
-        view.dragged(0.0, 10_000.0);
+        view.stooped(1.0, 100.0);
         assert!(view.above <= HIGHEST, "it went past the top");
         assert!(
             view.above < std::f32::consts::FRAC_PI_2,
@@ -333,7 +343,7 @@ mod tests {
         );
         assert!(view.eye().y > 0.0);
 
-        view.dragged(0.0, -20_000.0);
+        view.stooped(-1.0, 200.0);
         assert!(view.above >= LOWEST, "it went under the cloth");
         assert!(view.above > 0.0, "it lies flat on the cloth");
         assert!(view.eye().y > 0.0, "the eye is under the table");
@@ -345,10 +355,10 @@ mod tests {
         // and a low one is the only way to read a thin cut
         let mut view = View::new();
 
-        view.dragged(0.0, 10_000.0);
+        view.stooped(1.0, 100.0);
         let over = view.eye();
 
-        view.dragged(0.0, -20_000.0);
+        view.stooped(-1.0, 200.0);
         let low = view.eye();
 
         assert!(

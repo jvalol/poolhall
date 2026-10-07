@@ -52,6 +52,24 @@ thing nothing checks. It is far enough back now for the near cushion to be in
 frame, and no further: a whole table with a wide black border round it is the
 other failure, and that one is easy to arrive at while fixing this one.
 
+**The keys move you and the mouse takes the shot.** Walking round, leaning in
+and sliding across are all on the keyboard, and the mouse does nothing but
+point at the cloth and pull the cue back. A drag that walked you round meant
+the one pointing device was doing both jobs, and the hand that aims kept
+moving the room.
+
+W and S lean in and out, A and D walk round, and the arrows slide what you are
+looking at. That is the arcade's own split, which is the building this engine
+was shown off in: the letters are the feet and the arrows are the head.
+
+Shift gives each key its second job. With it held the arrows put the cue tip,
+which is the fine control and the one that wants a modifier rather than a key
+of its own, and W and S stand you up and stoop you. Standing up had nowhere
+else to go once the drag was gone, and it is half of where you are.
+
+Everything the keys do is a rate a second and not a step a press, because a key
+that moves the eye a fixed amount per press is a key you hammer.
+
 **And it slides across, with shift held.** Walking round and leaning in are two
 of the three things a person wants from a camera. The third is to put a
 particular corner in the middle of the window, and without it the eye orbited
@@ -81,18 +99,19 @@ knows about the walk.
 ## Acceptance criteria
 
 - It starts behind the head rail and above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_above_the_cloth`
-- Dragging across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
-- Shift and a drag slide what the eye looks at along the cloth. — `view::tests::panning_slides_what_it_looks_at`
+- Walking across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
+- The keys walk you and the mouse is left for the shot. — `poolhall_game::tests::the_keys_walk_and_the_mouse_is_for_the_shot`
+- The arrows slide what you are looking at, and leave the cue tip alone. — `poolhall_game::tests::the_arrows_slide_what_you_are_looking_at`
+- Shift and the arrows slide what the eye looks at along the cloth. — `view::tests::panning_slides_what_it_looks_at`
 - It slides the way the eye faces, not the way the world is laid out. — `view::tests::panning_follows_where_you_are_standing`
 - And it cannot be slid off into the black. — `view::tests::panning_stops_at_the_edge_of_the_table`
 - The wheel leans in and out without walking round. — `view::tests::the_wheel_leans_in_and_out`
 - And stops short of the table and of the next room. — `view::tests::it_cannot_lean_past_the_table_or_into_a_ball`
 - A notch is worth the same share from anywhere. — `view::tests::a_notch_is_worth_the_same_from_anywhere`
 - And right round comes back where it started. — `view::tests::walking_right_round_comes_back`
-- Dragging down and up changes the height. — `view::tests::dragging_up_and_down_changes_the_height`
+- Shift with W and S stands you up and stoops you. — `view::tests::standing_up_and_stooping_changes_the_height`
 - It stops a hair short of flat and of straight down. — `view::tests::it_stops_a_hair_short_of_flat_and_of_straight_down`
 - And reaches from nearly flat to nearly overhead. — `view::tests::it_reaches_from_nearly_flat_to_nearly_overhead`
-- The right button walks and the left still shoots. — `poolhall_game::tests::the_right_button_walks_and_the_left_shoots`
 - Walking moves the eye and leaves the table where it is. — `poolhall_game::tests::walking_moves_the_eye_and_not_the_table`
 
 ### Verified by hand

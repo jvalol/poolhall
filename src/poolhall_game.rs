@@ -85,17 +85,18 @@ pub struct PoolhallGame {
     aim: Vec3,
     /// Where on the cue ball's face the tip goes, in radii.
     tip: Vec2,
-    /// Up, down, left, right, held.
+    /// Up, down, left, right, held. The cue tip, with shift down.
     nudging: [bool; 4],
+    /// W, S, A, D held: round the table and in and out.
+    walking_keys: [bool; 4],
     power: f32,
     charging: bool,
     /// Where the player is standing, per spec 0003.
     view: View,
-    /// Whether shift is held, which turns walking round into sliding across.
+    /// Whether shift is held, which gives each key its second job: the arrows
+    /// put the cue tip instead of sliding, and W and S stand you up instead of
+    /// leaning you in.
     sliding: bool,
-    /// Whether they are walking round the table, which is the right button
-    /// held: the left one is already aiming and shooting.
-    walking: bool,
     sphere: Option<MeshId>,
     block: Option<MeshId>,
     /// One band per striped ball, in ball order from nine upwards.
@@ -126,11 +127,11 @@ impl PoolhallGame {
             aim: Vec3::X,
             tip: Vec2::ZERO,
             nudging: [false; 4],
+            walking_keys: [false; 4],
             power: 0.0,
             charging: false,
             view: View::new(),
             sliding: false,
-            walking: false,
             sphere: None,
             block: None,
             faces: Vec::new(),
@@ -254,10 +255,10 @@ impl PoolhallGame {
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
                 _ if self.run.in_hand => String::from("ball in hand: click to place it"),
-                _ => String::from("point and hold to shoot, right drag turns, shift drag slides"),
+                _ => String::from("point and hold to shoot. wasd walks, arrows slide"),
             },
             format!(
-                "arrow keys put the tip at {:+.1} across, {:+.1} up",
+                "shift and the arrows put the tip at {:+.1} across, {:+.1} up",
                 self.tip.x, self.tip.y
             ),
         ]
@@ -341,12 +342,35 @@ impl Game for PoolhallGame {
             return;
         }
 
+        // the feet: W and S lean in and out, A and D walk round
+        let round = (self.walking_keys[3] as i32 - self.walking_keys[2] as i32) as f32;
+        let inout = (self.walking_keys[0] as i32 - self.walking_keys[1] as i32) as f32;
+        if self.sliding {
+            // shift turns the feet into standing up and stooping
+            self.view.stooped(inout, dt);
+        } else if round != 0.0 || inout != 0.0 {
+            self.view.walked(round, inout, dt);
+        }
+
         let across = (self.nudging[3] as i32 - self.nudging[2] as i32) as f32;
         let up = (self.nudging[0] as i32 - self.nudging[1] as i32) as f32;
-        self.tip = vec2(
-            (self.tip.x + across * TIP_PER_SECOND * dt).clamp(-TIP_LIMIT, TIP_LIMIT),
-            (self.tip.y + up * TIP_PER_SECOND * dt).clamp(-TIP_LIMIT, TIP_LIMIT),
-        );
+
+        if self.sliding {
+            // the cue tip, which is the fine control and so wants the modifier
+            self.tip = vec2(
+                (self.tip.x + across * TIP_PER_SECOND * dt).clamp(-TIP_LIMIT, TIP_LIMIT),
+                (self.tip.y + up * TIP_PER_SECOND * dt).clamp(-TIP_LIMIT, TIP_LIMIT),
+            );
+        } else if across != 0.0 || up != 0.0 {
+            // and the head: the arrows slide what you are looking at, the way
+            // they look around in the arcade
+            let half = glam::vec2(
+                table::HALF_LONG + table::APRON,
+                table::HALF_WIDE + table::APRON,
+            );
+
+            self.view.slid(across, up, dt, half);
+        }
 
         if self.charging {
             self.power = (self.power + HARDEST / TO_FULL * dt).min(HARDEST);
@@ -476,6 +500,10 @@ impl Game for PoolhallGame {
             KeyboardKey::Left => self.nudging[2] = down,
             KeyboardKey::Right => self.nudging[3] = down,
             KeyboardKey::LShift | KeyboardKey::RShift => self.sliding = down,
+            KeyboardKey::W => self.walking_keys[0] = down,
+            KeyboardKey::S => self.walking_keys[1] = down,
+            KeyboardKey::A => self.walking_keys[2] = down,
+            KeyboardKey::D => self.walking_keys[3] = down,
             KeyboardKey::Space if down => self.tip = Vec2::ZERO,
             KeyboardKey::R if down => {
                 if self.run.phase() == Phase::Over {
@@ -490,11 +518,6 @@ impl Game for PoolhallGame {
     }
 
     fn process_mouse(&mut self, input: MouseInput) {
-        if input.button == MouseButton::Right {
-            self.walking = input.is_pressed();
-            return;
-        }
-
         if input.button != MouseButton::Left || self.run.phase() != Phase::Aiming {
             return;
         }
@@ -528,24 +551,7 @@ impl Game for PoolhallGame {
 
     /// The mouse moved in device units, which keeps arriving while a button is
     /// held. Only the walk reads it; the aim reads where the cursor is.
-    fn mouse_motion(&mut self, delta: Vec2) {
-        if !self.walking {
-            return;
-        }
-
-        // the same drag does two things, because there is no third button on a
-        // trackpad and the arrows are already the cue tip
-        if self.sliding {
-            let half = glam::vec2(
-                table::HALF_LONG + table::APRON,
-                table::HALF_WIDE + table::APRON,
-            );
-
-            self.view.panned(delta.x, delta.y, half);
-        } else {
-            self.view.dragged(delta.x, delta.y);
-        }
-    }
+    fn mouse_motion(&mut self, _delta: Vec2) {}
 
     /// The wheel leans in and out, per spec 0003.
     fn mouse_wheel(&mut self, delta: Vec2) {
@@ -604,11 +610,9 @@ mod tests {
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
 
-        game.process_keyboard(KeyboardInput::new(
-            KeyboardKey::Down,
-            KeyboardKeyState::Pressed,
-            false,
-        ));
+        for key in [KeyboardKey::LShift, KeyboardKey::Down] {
+            game.process_keyboard(KeyboardInput::new(key, KeyboardKeyState::Pressed, false));
+        }
         for _ in 0..600 {
             game.update(1.0 / 60.0, &mut geometry, &mut text, &sound);
         }
@@ -682,50 +686,70 @@ mod tests {
         assert_eq!(game.run.shots(), 1, "letting go did not shoot");
     }
 
+    /// Spec 0003: the keys walk you round and the mouse is left to aim.
     #[test]
-    fn the_right_button_walks_and_the_left_shoots() {
+    fn the_keys_walk_and_the_mouse_is_for_the_shot() {
         let mut game = PoolhallGame::new();
+        let mut text = TextRenderer::new();
+        let sound = SoundSystem::new();
+        let mut geometry = Geometry::new();
         let was = game.view.eye();
 
-        // the right button is the one nothing else is using
-        game.process_mouse(MouseInput::new(
-            MouseButton::Right,
-            blitzkit::mouse::ButtonState::Pressed,
+        game.process_keyboard(KeyboardInput::new(
+            KeyboardKey::A,
+            KeyboardKeyState::Pressed,
+            false,
         ));
-        game.mouse_motion(vec2(120.0, 40.0));
+        for _ in 0..30 {
+            game.update(1.0 / 60.0, &mut geometry, &mut text, &sound);
+        }
 
-        assert_ne!(game.view.eye(), was, "the right drag did not walk");
+        assert_ne!(game.view.eye(), was, "A did not walk round");
         assert_eq!(game.run.shots(), 0, "walking took a shot");
 
         // and letting go stops the walk
-        game.process_mouse(MouseInput::new(
-            MouseButton::Right,
-            blitzkit::mouse::ButtonState::Released,
+        game.process_keyboard(KeyboardInput::new(
+            KeyboardKey::A,
+            KeyboardKeyState::Released,
+            false,
         ));
         let standing = game.view.eye();
-        game.mouse_motion(vec2(200.0, 0.0));
+        for _ in 0..30 {
+            game.update(1.0 / 60.0, &mut geometry, &mut text, &sound);
+        }
 
         assert_eq!(
             game.view.eye(),
             standing,
             "it kept walking after letting go"
         );
+
+        // the mouse moving does nothing to where you stand
+        game.mouse_motion(vec2(300.0, 120.0));
+        assert_eq!(game.view.eye(), standing, "the mouse moved the eye");
     }
 
+    /// Spec 0003: walking round moves the eye and leaves the table where it is.
     #[test]
     fn walking_moves_the_eye_and_not_the_table() {
         let mut game = PoolhallGame::new();
         let mut scene = Scene::new();
         let mut camera = Camera::new();
+        let mut text = TextRenderer::new();
+        let sound = SoundSystem::new();
+        let mut geometry = Geometry::new();
 
         game.draw(&mut scene, &mut camera);
         let was = camera.position;
 
-        game.process_mouse(MouseInput::new(
-            MouseButton::Right,
-            blitzkit::mouse::ButtonState::Pressed,
+        game.process_keyboard(KeyboardInput::new(
+            KeyboardKey::D,
+            KeyboardKeyState::Pressed,
+            false,
         ));
-        game.mouse_motion(vec2(300.0, 0.0));
+        for _ in 0..30 {
+            game.update(1.0 / 60.0, &mut geometry, &mut text, &sound);
+        }
         game.draw(&mut scene, &mut camera);
 
         assert_ne!(camera.position, was, "the eye did not move");
@@ -734,6 +758,31 @@ mod tests {
             (camera.position.length() - was.length()).abs() < 1e-2,
             "it walked towards the table"
         );
+    }
+
+    /// Spec 0003: and the arrows slide what you are looking at, which is the
+    /// one thing walking round cannot do.
+    #[test]
+    fn the_arrows_slide_what_you_are_looking_at() {
+        let mut game = PoolhallGame::new();
+        let mut scene = Scene::new();
+        let mut camera = Camera::new();
+        let mut text = TextRenderer::new();
+        let sound = SoundSystem::new();
+        let mut geometry = Geometry::new();
+
+        game.process_keyboard(KeyboardInput::new(
+            KeyboardKey::Left,
+            KeyboardKeyState::Pressed,
+            false,
+        ));
+        for _ in 0..30 {
+            game.update(1.0 / 60.0, &mut geometry, &mut text, &sound);
+        }
+        game.draw(&mut scene, &mut camera);
+
+        assert_ne!(camera.target, Vec3::ZERO, "the arrows did not slide");
+        assert_eq!(game.tip, Vec2::ZERO, "the arrows moved the cue tip as well");
     }
 
     #[test]

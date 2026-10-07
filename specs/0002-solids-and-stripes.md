@@ -69,6 +69,26 @@ to ship and more to go wrong.
 and a solid ball has one. What a ball is drawn with is near enough white and the
 whole of its paint comes from the picture.
 
+**The cloth takes the turn out of a ball that is going nowhere.** A pool ball
+that has stopped travelling has stopped turning, and one that sits rotating on
+the spot is a thing a table does not do.
+
+The engine spends a spin by rolling the ball along, which is right for a ball
+with room to roll into and wrong for one held by its neighbours. Wedged in a
+cluster it has nowhere to go, keeps a velocity it cannot spend, and the contact
+turns that velocity back into spin every step as fast as anything takes it
+away. Two balls off an ordinary break sat turning for most of a second, which
+is invisible on a plain coloured ball and obvious the moment there is a number
+on it.
+
+So what a ball did is what counts, not what it meant to do: a ball that has not
+moved this step has its spin and its speed taken down together, because either
+one alone feeds the other back. Only below the speed a shot ends at, so it
+never touches a ball that is still travelling and never eats a draw.
+
+**And a shot is not over while something is still turning.** The test was on
+speed alone, so a shot could end with a ball mid turn and freeze it there.
+
 **The cue ball stays white**, with nothing on it.
 
 ## Acceptance criteria
@@ -80,6 +100,7 @@ whole of its paint comes from the picture.
 - It turns the way it rolls. — `rules::tests::a_ball_turns_the_way_it_rolls`
 - A ball that has not moved has not turned. — `rules::tests::a_still_ball_does_not_turn`
 - A new rack has every ball upright and untouched. — `rules::tests::a_new_rack_has_not_turned`
+- And no ball turns on the spot. — `rules::tests::nothing_turns_on_the_spot`
 - Seven of the fifteen are striped, the eight is not one of them, and nine takes the one's hue. — `paint::tests::seven_are_striped_and_the_eight_is_not`
 - The band goes all the way round rather than being a patch. — `paint::tests::the_band_goes_all_the_way_round`
 - A stripe is the size it says. — `paint::tests::it_is_the_size_it_says`

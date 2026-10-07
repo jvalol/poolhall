@@ -196,6 +196,33 @@ impl Run {
             self.bodies[*at] = moving[n];
         }
 
+        // and the cloth takes the turn out of whatever is no longer going
+        // anywhere, per spec 0002. The engine spends a spin by rolling the ball
+        // along, which a ball wedged in a cluster cannot do.
+        for (n, at) in playing.iter().enumerate() {
+            let went = (self.bodies[*at].position - before[n].0).length();
+            // what it did, not what it meant to do. A ball shouldering into its
+            // neighbours keeps a velocity it cannot spend, so asking the
+            // velocity says it is travelling while the table says it has not
+            // moved in half a second.
+            if went >= shot::STILL * dt {
+                continue;
+            }
+
+            // and the speed with it, because the two feed each other: a ball
+            // shouldering its neighbours keeps a velocity it cannot spend, the
+            // contact turns that back into spin every step, and the spin is
+            // replenished as fast as the cloth takes it away.
+            let body = &mut self.bodies[*at];
+            let slowing = 1.0 + shot::SETTLES * dt;
+            body.spin /= slowing;
+            body.velocity.x /= slowing;
+            body.velocity.z /= slowing;
+            if body.spin.length() < shot::STILL {
+                body.spin = Vec3::ZERO;
+            }
+        }
+
         self.watch(&playing, &before, dt);
 
         self.rolled += 1;
@@ -336,6 +363,64 @@ mod tests {
         }
 
         shot::LONGEST
+    }
+
+    /// Spec 0002: and no ball turns on the spot. A pool ball that has stopped
+    /// travelling has stopped turning, and one that has not is a thing a table
+    /// does not do.
+    ///
+    /// Only through `Run`, which is why this lives here and not in `shot`. A
+    /// lone ball given spin and no speed converts it to a roll and is done
+    /// inside two seconds, so measured against the solver on its own there is
+    /// nothing to find. It takes a crowd: a ball shouldered by its neighbours
+    /// has nowhere to roll to, keeps a velocity it cannot spend, and the
+    /// contact turns that back into spin every step. Before the cloth was given
+    /// the job of taking it away, two balls off an ordinary break sat turning
+    /// for most of a second.
+    #[test]
+    fn nothing_turns_on_the_spot() {
+        let mut run = Run::new();
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+
+        // a fifth of a second: at the rates this happens at, a couple of
+        // degrees, which is under what an eye picks out
+        let most = (0.2 / shot::STEP) as usize;
+        let mut spot = [0usize; BALLS + 1];
+
+        for _ in 0..shot::LONGEST {
+            let before: Vec<Vec3> = (0..=BALLS).map(|ball| run.bodies[ball].position).collect();
+            let facing: Vec<Quat> = (0..=BALLS).map(|ball| run.facing(ball)).collect();
+            run.step(shot::STEP);
+
+            for ball in 0..=BALLS {
+                if run.is_down(ball) {
+                    continue;
+                }
+
+                let moved = (run.bodies[ball].position - before[ball]).length();
+                let turned = run.facing(ball).angle_between(facing[ball]);
+                // a tenth of a degree a step is six degrees a second, which you
+                // see on a ball with a number on it
+                if turned > 0.0017 && moved < 0.0005 {
+                    spot[ball] += 1;
+                } else {
+                    spot[ball] = 0;
+                }
+
+                assert!(
+                    spot[ball] <= most,
+                    "ball {} turned on the spot for {:.2}s",
+                    ball,
+                    spot[ball] as f32 * shot::STEP
+                );
+            }
+
+            if run.phase() != Phase::Rolling {
+                return;
+            }
+        }
+
+        panic!("the break never settled");
     }
 
     /// A run with everything cleared off the table but the balls named.

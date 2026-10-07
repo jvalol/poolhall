@@ -87,9 +87,28 @@ pub fn world() -> Vec<blitzkit::collision::Aabb> {
     all
 }
 
+/// How fast the cloth takes the turn out of a ball that is going nowhere.
+///
+/// A ball spinning on cloth and not travelling is a ball whose spin the cloth
+/// is eating, and it does not take a second about it. The engine turns spin
+/// into a roll instead, which is right for a ball with room to roll into and
+/// wrong for one held by its neighbours: wedged in a cluster it kept the spin,
+/// because there was nowhere for it to go and nothing taking it away. Balls sat
+/// turning on the spot for most of a second after a break, which is a thing a
+/// pool table does not do.
+///
+/// Only below `STILL`, so this never touches a ball that is still travelling
+/// and never eats a draw.
+pub const SETTLES: f32 = 20.0;
+
 /// Whether everything has stopped.
+///
+/// Turning counts. A ball that has stopped travelling and is still spinning has
+/// not stopped, and a shot that ends there leaves it frozen mid turn.
 pub fn nothing_is_moving(bodies: &[Body]) -> bool {
-    bodies.iter().all(|body| body.velocity.length() < STILL)
+    bodies
+        .iter()
+        .all(|body| body.velocity.length() < STILL && body.spin.length() < STILL)
 }
 
 #[cfg(test)]

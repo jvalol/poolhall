@@ -250,10 +250,13 @@ impl Run {
             }
             self.doing.first_hit = met;
         } else if !self.doing.reached_a_rail {
-            self.doing.reached_a_rail = playing
-                .iter()
-                .zip(before)
-                .any(|(_, (was, going))| self.met_a_rail(*was, *going, dt));
+            // either the ball swept into a cushion this step, or it is sitting
+            // against one now having not been a step ago. The second is the one
+            // that catches a ball arriving slowly, which is most of them.
+            self.doing.reached_a_rail = playing.iter().zip(before).any(|(ball, (was, going))| {
+                self.met_a_rail(*was, *going, dt)
+                    || (Self::on_a_rail(self.bodies[*ball].position) && !Self::on_a_rail(*was))
+            });
         }
 
         // taken off the table the moment it reaches the jaws, not when the shot
@@ -294,6 +297,29 @@ impl Run {
         table::cushions()
             .iter()
             .any(|rail| sweep_sphere(&body, path, rail).is_some())
+    }
+
+    /// Whether a ball is against a cushion where it stands.
+    ///
+    /// Asked of where the ball ended up, rather than swept along where it was
+    /// going. The sweep is the path the ball meant to take over one step and
+    /// the engine resolves the contact inside that step, so the two disagree by
+    /// a hair and the hair is the whole answer: a ball came up to a cushion at
+    /// three a second, the sweep reached two thousandths short of touching it,
+    /// and by the next step the engine had already turned the ball so the path
+    /// no longer pointed at the rail. Nothing ever met a rail and every shot
+    /// was a foul, the break included.
+    ///
+    /// The engine knows about the contact. This asks what happened instead of
+    /// working out again what should have.
+    fn on_a_rail(at: Vec3) -> bool {
+        let reach = table::BALL_RADIUS + table::RAIL_SLACK;
+
+        table::cushions().iter().any(|rail| {
+            let near = at.clamp(rail.min, rail.max);
+
+            at.distance_squared(near) <= reach * reach
+        })
     }
 
     /// The shot is over: take down what went down, and say what it was.
@@ -421,6 +447,28 @@ mod tests {
         }
 
         panic!("the break never settled");
+    }
+
+    /// Spec 0001: and a break is not a foul.
+    ///
+    /// The one that was wrong. A ball arriving at a cushion slowly is never
+    /// caught by the sweep: it came up at three a second, the sweep reached two
+    /// thousandths short of touching, and by the next step the engine had
+    /// already turned it so the path no longer pointed at the rail. Nothing
+    /// ever met a rail, so every shot in the game was a foul and the cue ball
+    /// came back to hand after every one of them, the break included.
+    #[test]
+    fn a_break_is_not_a_foul() {
+        let mut run = Run::new();
+        run.place(table::head_spot());
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert!(
+            !matches!(run.last, Some(Outcome::Foul(Foul::NoRail))),
+            "a full break was called no rail"
+        );
+        assert!(!run.in_hand, "a full break put the cue ball back in hand");
     }
 
     /// A run with everything cleared off the table but the balls named.

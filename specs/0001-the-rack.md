@@ -112,6 +112,23 @@ misses it too, because a step containing a bounce has a net displacement
 pointing away from the rail. Where it was and where it was going is the path
 `through_the_world` sweeps, and `sweep_sphere` is what it sweeps with.
 
+**Or if it has come to rest against one.** The sweep is the answer for a ball
+that bounces and the wrong answer for a ball that arrives slowly and stops. One
+came up to a cushion at three units a second: the sweep over that step reached
+two thousandths short of touching, and by the next step the engine had already
+turned the ball, so the path no longer pointed at the rail. The contact
+happened inside a step and the sweep straddled it on both sides.
+
+So nothing ever met a rail. Every shot in the game was a foul, the break
+included, and the cue ball came back to hand after each one with nothing on
+screen to say why.
+
+Both tests, then, and the second asks what happened rather than working out
+again what should have: a ball counts when it is against a cushion now and was
+not a step ago. The engine already resolved that contact; this reads the
+result. The paragraph above is still true about a bouncing ball, which is why
+the sweep stays.
+
 **A potted ball comes off the table in the step it reaches the jaws**, not when
 the shot ends. Past the cushions there is apron and then nothing, so a ball left
 rolling after it has been potted finds the edge of the world. This was still
@@ -166,6 +183,7 @@ takes, how much draw a cloth leaves.
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
 - Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
 - No cushion after contact is a foul. — `rules::tests::no_rail_after_contact_is_a_foul`
+- But a break is not one, because a ball that arrives slowly still arrives. — `rules::tests::a_break_is_not_a_foul`
 - A foul costs a shot and gives ball in hand. — `rules::tests::a_foul_costs_a_shot_and_the_cue_ball`
 - And the cue ball cannot be moved at any other time. — `rules::tests::the_cue_ball_cannot_be_moved_unless_it_is_in_hand`
 - An empty table ends the run. — `rules::tests::an_empty_table_ends_it`

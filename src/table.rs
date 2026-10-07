@@ -30,6 +30,12 @@ const RAIL_GAP: f32 = 2.4;
 /// standing on something until it is taken off the table.
 pub const APRON: f32 = 3.0;
 
+/// How close to a cushion counts as against it.
+///
+/// A hair, because the solver settles a ball a hair off the face rather than
+/// exactly on it, and a test for exact contact never fires.
+pub const RAIL_SLACK: f32 = 0.02;
+
 /// The cloth, a solid with its top at y zero.
 ///
 /// One piece, with no holes in it. The spec first called for pockets cut out of

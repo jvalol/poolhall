@@ -52,6 +52,27 @@ thing nothing checks. It is far enough back now for the near cushion to be in
 frame, and no further: a whole table with a wide black border round it is the
 other failure, and that one is easy to arrive at while fixing this one.
 
+**And it slides across, with shift held.** Walking round and leaning in are two
+of the three things a person wants from a camera. The third is to put a
+particular corner in the middle of the window, and without it the eye orbited
+one fixed point for ever: every view was the table's middle seen from somewhere
+else.
+
+Shift and the same right drag, rather than a button of its own. There is no
+third button on a trackpad and the arrow keys are already the cue tip, so the
+one drag does two things depending on a modifier. It slides along the cloth in
+the eye's own directions, so dragging right moves the table right whichever
+side you are standing on, and dragging up sends the ground away under you
+rather than carrying the camera over it, which is the one that reads as moving
+the view and not shoving the furniture.
+
+How far a pixel slides is a share of how far out the eye is, the same shape as
+a zoom notch and for the same reason: one fixed distance crawls from across the
+room and jumps from up close.
+
+It stops a little past the cushion. Panning with nothing to stop it is a camera
+lost in the black with no way back, and there is no key spare to recentre with.
+
 **The aim follows the walk without being told to.** Spec 0001 points the shot at
 whatever the cursor is over on the cloth, and the cursor ray comes from the
 camera, so turning the camera turns what the cursor means. Nothing in the aim
@@ -61,6 +82,9 @@ knows about the walk.
 
 - It starts behind the head rail and above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_above_the_cloth`
 - Dragging across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
+- Shift and a drag slide what the eye looks at along the cloth. — `view::tests::panning_slides_what_it_looks_at`
+- It slides the way the eye faces, not the way the world is laid out. — `view::tests::panning_follows_where_you_are_standing`
+- And it cannot be slid off into the black. — `view::tests::panning_stops_at_the_edge_of_the_table`
 - The wheel leans in and out without walking round. — `view::tests::the_wheel_leans_in_and_out`
 - And stops short of the table and of the next room. — `view::tests::it_cannot_lean_past_the_table_or_into_a_ball`
 - A notch is worth the same share from anywhere. — `view::tests::a_notch_is_worth_the_same_from_anywhere`

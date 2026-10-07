@@ -91,6 +91,8 @@ pub struct PoolhallGame {
     charging: bool,
     /// Where the player is standing, per spec 0003.
     view: View,
+    /// Whether shift is held, which turns walking round into sliding across.
+    sliding: bool,
     /// Whether they are walking round the table, which is the right button
     /// held: the left one is already aiming and shooting.
     walking: bool,
@@ -127,6 +129,7 @@ impl PoolhallGame {
             power: 0.0,
             charging: false,
             view: View::new(),
+            sliding: false,
             walking: false,
             sphere: None,
             block: None,
@@ -251,7 +254,9 @@ impl PoolhallGame {
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
                 _ if self.run.in_hand => String::from("ball in hand: click to place it"),
-                _ => String::from("point and hold to shoot, right drag to walk round"),
+                _ => String::from(
+                    "point and hold to shoot, right drag to walk round, shift right drag to slide across",
+                ),
             },
             format!(
                 "arrow keys put the tip at {:+.1} across, {:+.1} up",
@@ -362,7 +367,7 @@ impl Game for PoolhallGame {
 
     fn draw(&mut self, scene: &mut Scene, camera: &mut Camera) {
         camera.position = self.view.eye();
-        camera.target = Vec3::ZERO;
+        camera.target = self.view.at;
 
         if let Some(cursor) = self.pointing {
             self.aimed_at = on_the_cloth(camera, cursor);
@@ -472,6 +477,7 @@ impl Game for PoolhallGame {
             KeyboardKey::Down => self.nudging[1] = down,
             KeyboardKey::Left => self.nudging[2] = down,
             KeyboardKey::Right => self.nudging[3] = down,
+            KeyboardKey::LShift | KeyboardKey::RShift => self.sliding = down,
             KeyboardKey::Space if down => self.tip = Vec2::ZERO,
             KeyboardKey::R if down => {
                 if self.run.phase() == Phase::Over {
@@ -525,7 +531,20 @@ impl Game for PoolhallGame {
     /// The mouse moved in device units, which keeps arriving while a button is
     /// held. Only the walk reads it; the aim reads where the cursor is.
     fn mouse_motion(&mut self, delta: Vec2) {
-        if self.walking {
+        if !self.walking {
+            return;
+        }
+
+        // the same drag does two things, because there is no third button on a
+        // trackpad and the arrows are already the cue tip
+        if self.sliding {
+            let half = glam::vec2(
+                table::HALF_LONG + table::APRON,
+                table::HALF_WIDE + table::APRON,
+            );
+
+            self.view.panned(delta.x, delta.y, half);
+        } else {
             self.view.dragged(delta.x, delta.y);
         }
     }

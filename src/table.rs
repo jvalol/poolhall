@@ -28,7 +28,7 @@ const RAIL_GAP: f32 = 2.4;
 
 /// How far the cloth reaches past the rails, so a ball in a pocket gap is
 /// standing on something until it is taken off the table.
-const APRON: f32 = 3.0;
+pub const APRON: f32 = 3.0;
 
 /// The cloth, a solid with its top at y zero.
 ///

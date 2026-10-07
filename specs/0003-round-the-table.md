@@ -45,6 +45,13 @@ a view matrix built from two parallel vectors is nothing at all.
 **You start behind the head rail and well up**, which is where you break from and
 the view that shows the whole table.
 
+It did not show the whole table. The starting distance was close enough that the
+near end ran off the bottom of the window while a third of the frame above it
+was empty, which is the one thing this spec asks of the opening view and the one
+thing nothing checks. It is far enough back now for the near cushion to be in
+frame, and no further: a whole table with a wide black border round it is the
+other failure, and that one is easy to arrive at while fixing this one.
+
 **The aim follows the walk without being told to.** Spec 0001 points the shot at
 whatever the cursor is over on the cloth, and the cursor ray comes from the
 camera, so turning the camera turns what the cursor means. Nothing in the aim

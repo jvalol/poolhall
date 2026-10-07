@@ -84,6 +84,13 @@ later shots until it leaves the world, and a falling body is a body still moving
 and one at the middle of each long rail. Real proportions, in units where a ball
 is one across.
 
+**The cloth is matte.** The engine gives a shininess and no specular strength,
+and the highlight is the angle raised to that power, so a small number is a wide
+highlight rather than a weak one. At the engine's default the sun laid a white
+wash across the middle of a surface fifty units across and the cloth read as wet
+vinyl. The number is high enough that the highlight closes to nothing, which is
+how you say matte with the one number there is.
+
 **The cushions are gaps. The cloth is not.** Six lengths of rail with a space at
 every pocket, so a ball on its way to one goes between real geometry rather than
 through a special case in the rules. The cloth under them is one piece with an

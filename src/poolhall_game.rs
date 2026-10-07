@@ -34,6 +34,15 @@ const TIP_PER_SECOND: f32 = 1.4;
 const TIP_LIMIT: f32 = 0.9;
 
 const CLOTH: Vec4 = vec4(0.13, 0.36, 0.26, 1.0);
+
+/// How tight the cloth's highlight is.
+///
+/// Very, which is how you say matte with the one number there is. The engine
+/// gives a shininess and no specular strength, and the term is the angle raised
+/// to that power: a small number is a wide highlight, not a weak one. At the
+/// default of 32 the sun laid a white wash across the middle of a surface fifty
+/// units across and the cloth read as wet vinyl. Baize scatters.
+const CLOTH_SHEEN: f32 = 320.0;
 const RAIL: Vec4 = vec4(0.28, 0.17, 0.11, 1.0);
 const POCKET: Vec4 = vec4(0.03, 0.04, 0.05, 1.0);
 const CUE_BALL: Vec4 = vec4(0.97, 0.96, 0.92, 1.0);
@@ -367,7 +376,7 @@ impl Game for PoolhallGame {
             return;
         };
 
-        scene.push_colored(
+        scene.push_material(
             block,
             &Transform::at(vec3(0.0, -1.0, 0.0)).with_scale(vec3(
                 (HALF_LONG + 3.0) * 2.0,
@@ -375,6 +384,7 @@ impl Game for PoolhallGame {
                 (HALF_WIDE + 3.0) * 2.0,
             )),
             CLOTH,
+            CLOTH_SHEEN,
         );
 
         for rail in table::cushions() {

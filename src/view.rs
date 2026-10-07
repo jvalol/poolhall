@@ -4,7 +4,7 @@
 use glam::{vec3, Vec3};
 
 /// How far the eye starts from the middle of the table.
-pub const BACK: f32 = 50.0;
+pub const BACK: f32 = 56.0;
 
 /// And how near or far it can get.
 ///

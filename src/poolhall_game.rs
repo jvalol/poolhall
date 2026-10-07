@@ -254,9 +254,7 @@ impl PoolhallGame {
             match self.run.last {
                 Some(Outcome::Foul(why)) => said(why).to_string(),
                 _ if self.run.in_hand => String::from("ball in hand: click to place it"),
-                _ => String::from(
-                    "point and hold to shoot, right drag to walk round, shift right drag to slide across",
-                ),
+                _ => String::from("point and hold to shoot, right drag turns, shift drag slides"),
             },
             format!(
                 "arrow keys put the tip at {:+.1} across, {:+.1} up",

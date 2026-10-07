@@ -97,7 +97,8 @@ pub struct PoolhallGame {
     sphere: Option<MeshId>,
     block: Option<MeshId>,
     /// One band per striped ball, in ball order from nine upwards.
-    stripes: Vec<TextureId>,
+    /// One per ball, in order, each carrying that ball's colour and number.
+    faces: Vec<TextureId>,
     quitting: bool,
     /// Whether this run is only here to be photographed, and whether the break
     /// has been taken. See `refresh-screenshots` in the project above.
@@ -129,7 +130,7 @@ impl PoolhallGame {
             walking: false,
             sphere: None,
             block: None,
-            stripes: Vec::new(),
+            faces: Vec::new(),
             quitting: false,
             staged: crate::staged(),
             broken: false,
@@ -141,13 +142,27 @@ impl PoolhallGame {
         self.aim
     }
 
-    /// The band this ball wears, if it wears one.
-    fn striped(&self, ball: usize) -> Option<TextureId> {
-        if !paint::is_striped(ball) {
-            return None;
-        }
+    /// The face this ball wears: its colour, its band if it has one, and its
+    /// number.
+    fn face(&self, ball: usize) -> Option<TextureId> {
+        self.faces.get(ball - 1).copied()
+    }
 
-        self.stripes.get(paint::partner(ball)).copied()
+    /// The hue a ball is painted. A striped one takes the one seven below it,
+    /// which is how a real set is made, and wears it as a band rather than all
+    /// over.
+    fn hue(ball: usize) -> [u8; 3] {
+        let paint = if paint::is_striped(ball) {
+            PAINT[paint::partner(ball)]
+        } else {
+            PAINT[ball - 1]
+        };
+
+        [
+            (paint.x * 255.0) as u8,
+            (paint.y * 255.0) as u8,
+            (paint.z * 255.0) as u8,
+        ]
     }
 
     fn line(&self, n: usize) -> Vec2 {
@@ -299,18 +314,10 @@ impl Game for PoolhallGame {
         self.sphere = Some(renderer.add_mesh(&MeshData::sphere(24, 16)));
         self.block = Some(renderer.add_mesh(&MeshData::cube()));
 
-        self.stripes = (1..=BALLS)
-            .filter(|ball| paint::is_striped(*ball))
-            .map(|ball| {
-                let hue = PAINT[paint::partner(ball)];
-                let band = [
-                    (hue.x * 255.0) as u8,
-                    (hue.y * 255.0) as u8,
-                    (hue.z * 255.0) as u8,
-                ];
-
-                renderer.add_texture(&paint::stripe(band))
-            })
+        // every ball and not only the striped ones, because every ball carries
+        // its number and a number is a texture
+        self.faces = (1..=BALLS)
+            .map(|ball| renderer.add_texture(&paint::ball(ball, Self::hue(ball))))
             .collect();
     }
 
@@ -424,10 +431,11 @@ impl Game for PoolhallGame {
                 .with_rotation(self.run.facing(ball))
                 .with_scale(Vec3::splat(BALL_RADIUS * 2.0));
 
-            // a striped ball is white with a band painted on, so the colour it
-            // is drawn with is white and the band comes from the texture
-            match self.striped(ball) {
-                Some(band) => scene.push_textured(sphere, band, &at, CUE_BALL, 64.0),
+            // the whole of a ball's paint is in its texture now, its number
+            // included, so what it is drawn with is near enough white and the
+            // colour comes from the picture
+            match self.face(ball) {
+                Some(face) => scene.push_textured(sphere, face, &at, CUE_BALL, 64.0),
                 None => scene.push_colored(sphere, &at, PAINT[ball - 1]),
             }
         }

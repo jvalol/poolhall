@@ -42,6 +42,33 @@ takes it away again as the ball rolls. Adding that spin up gives which way round
 the ball has got to, the same way marble's `facing` does, and the band follows.
 Without it a rolling ball would look like a photograph of a rolling ball.
 
+**Every numbered ball wears its number**, in a white circle, the eight an 8 and
+the fifteen a 15. Two circles, one over each pole, which is the count a real
+ball has.
+
+A real ball wears them on its equator and this one cannot. From a camera above a
+table you are looking at the top of a ball: an equator is edge on, and the first
+try at this put the circle there and got a white sliver at the rim with the
+numeral turned away. Up is where you are looking from, so up is where the number
+goes. The same trade this spec already makes by drawing the band wider than a
+real ball's.
+
+**The numeral is drawn in the sphere's stretch rather than against it.** A pole
+is the one place the texture is worst behaved: every column of it meets at that
+one point, so the cap is a strip across the whole width and anything drawn
+square into that strip is smeared into a ring. Each texel of the cap is turned
+back into the place it sits on the flat the pole touches, so far out at so many
+degrees round, and the glyph is read there. What comes out is bent in the
+texture and straight on the ball, which is the only way round that works.
+
+**The numerals are drawn too**, like the band, from a ten glyph font five across
+and seven down. A font file for ten shapes that are never set in a line is more
+to ship and more to go wrong.
+
+**Every ball is a texture now**, solids included, because a number is a texture
+and a solid ball has one. What a ball is drawn with is near enough white and the
+whole of its paint comes from the picture.
+
 **The cue ball stays white**, with nothing on it.
 
 ## Acceptance criteria
@@ -56,6 +83,10 @@ Without it a rolling ball would look like a photograph of a rolling ball.
 - Seven of the fifteen are striped, the eight is not one of them, and nine takes the one's hue. — `paint::tests::seven_are_striped_and_the_eight_is_not`
 - The band goes all the way round rather than being a patch. — `paint::tests::the_band_goes_all_the_way_round`
 - A stripe is the size it says. — `paint::tests::it_is_the_size_it_says`
+- Every ball carries its own number, over each pole. — `paint::tests::every_ball_wears_its_number`
+- The circle stops short of the middle rather than whitening the ball. — `paint::tests::the_circle_stops_short_of_the_middle`
+- The numeral is drawn in polar coordinates, so a pole does not smear it into a ring. — `paint::tests::the_numeral_is_not_smeared_round_the_pole`
+- No two balls look alike. — `paint::tests::no_two_balls_look_alike`
 
 ### Verified by hand
 

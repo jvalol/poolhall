@@ -4,7 +4,7 @@
 use glam::{vec3, Vec2, Vec3};
 
 /// How far the eye starts from the middle of the table.
-pub const BACK: f32 = 56.0;
+pub const BACK: f32 = 34.0;
 
 /// And how near or far it can get.
 ///
@@ -35,14 +35,22 @@ pub const BACK_PER_NOTCH: f32 = 0.018;
 pub const LOWEST: f32 = 0.08;
 pub const HIGHEST: f32 = 1.55;
 
-/// Where it starts: behind the head rail and well up.
+/// Where it starts: behind the head rail, round to one side, and low.
 ///
 /// The head rail is the negative x end, and `eye` lays the angle out as
 /// `(sin, cos)`, so behind it is minus a quarter turn rather than a half. A
 /// half turn put the eye along the side rail, and the test that was meant to
 /// catch it passed because `sin(PI)` is a hair negative.
-pub const FROM: f32 = -std::f32::consts::FRAC_PI_2;
-pub const ABOVE: f32 = 0.95;
+///
+/// A third of a radian round from square, and low. Square behind the rail at
+/// fifty four degrees up is the view that tells you least about a table: it is
+/// a corridor, every ball lines up with every other, and nothing about the lie
+/// reads. From the corner and nearer the cloth, the table is a shape and the
+/// balls are spread across it. Jake picked this one off a screen and I matched
+/// it by eye, so the three numbers are what looked right rather than what was
+/// measured.
+pub const FROM: f32 = -std::f32::consts::FRAC_PI_2 - 0.55;
+pub const ABOVE: f32 = 0.42;
 
 /// How fast the keys move it, per second held.
 ///
@@ -160,20 +168,29 @@ impl View {
 mod tests {
     use super::*;
 
+    /// Spec 0003: it starts behind the head rail and round to one side, above
+    /// the cloth.
+    ///
+    /// Off to one side on purpose. Square behind the rail is the view that
+    /// tells you least: the table is a corridor, every ball is in line with
+    /// every other, and nothing about the lie reads. This used to assert the
+    /// eye was square on, which is the thing that was wrong with it.
     #[test]
-    fn it_starts_behind_the_head_rail_and_above_the_cloth() {
+    fn it_starts_behind_the_head_rail_and_off_to_one_side() {
         let view = View::new();
         let eye = view.eye();
 
-        // behind the head rail, not merely a hair the right side of the middle
+        assert!(eye.x < 0.0, "it does not start at the head end: {:?}", eye);
         assert!(
-            eye.x < -BACK * 0.5,
-            "it does not start behind the head rail: {:?}",
+            eye.z.abs() > BACK * 0.1,
+            "it starts square behind the rail: {:?}",
             eye
         );
+        // and round the corner, not along the side rail: the long axis is
+        // still the one you are looking down
         assert!(
-            eye.z.abs() < BACK * 0.1,
-            "it starts off to one side: {:?}",
+            eye.x.abs() > eye.z.abs(),
+            "it starts beside the table rather than behind it: {:?}",
             eye
         );
         assert!(eye.y > 0.0, "it starts under the table: {:?}", eye);
@@ -264,15 +281,28 @@ mod tests {
     fn d_walks_you_to_your_right() {
         let mut view = View::new();
         let was = view.eye();
-        // from the head rail the eye looks along +x, so its right hand is +z
-        assert!(was.x < 0.0 && was.z.abs() < 1e-3, "{:?}", was);
+        // worked out from where the eye is rather than assumed, because the
+        // opening view is no longer square behind the rail and an assumed
+        // axis is a test that only holds for one of them
+        let ahead = (view.at - was).normalize();
+        let right = ahead.cross(Vec3::Y).normalize();
 
         view.walked(1.0, 0.0, 0.2);
-        assert!(view.eye().z > was.z, "D walked left: {:?}", view.eye());
+        assert!(
+            (view.eye() - was).dot(right) > 0.0,
+            "D walked left: {:?} to {:?}",
+            was,
+            view.eye()
+        );
 
         let mut other = View::new();
         other.walked(-1.0, 0.0, 0.2);
-        assert!(other.eye().z < was.z, "A walked right: {:?}", other.eye());
+        assert!(
+            (other.eye() - was).dot(right) < 0.0,
+            "A walked right: {:?} to {:?}",
+            was,
+            other.eye()
+        );
     }
 
     #[test]

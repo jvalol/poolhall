@@ -62,6 +62,17 @@ and hold is a shot. Without something ending it, every click put the ball
 somewhere again and nothing ever got as far as shooting, which is how it
 shipped the first time.
 
+**Hitting the eight first is a foul**, until the eight is all that is left,
+at which point it is the ball you have to hit.
+
+Whether it was alone is read when the shot is struck and not when it ends.
+Potting the last other ball during the same shot does not make the eight legal
+to have hit first: what counts is the table you struck it from.
+
+This is the one piece of eight ball's ordering that is here. Spec 0002 took the
+rest out on purpose and says so, and that paragraph has been corrected: any
+ball may be hit first except this one.
+
 **How long you hold maps to how far the ball goes**, not to how fast it leaves.
 Rolling resistance is a steady slowing, so distance goes as the square of
 speed, and a wind-up that charges straight into a speed puts nearly all the
@@ -245,6 +256,9 @@ takes, how much draw a cloth leaves.
 - Any ball may be hit first. — `rules::tests::any_ball_first_is_legal`
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
 - Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
+- Hitting the eight first is a foul. — `rules::tests::hitting_the_eight_first_is_a_foul`
+- Unless it is the only ball up, when it is the ball to hit. — `rules::tests::the_eight_alone_is_the_ball_to_hit`
+- And clearing up during the same shot does not excuse it. — `rules::tests::clearing_up_during_the_same_shot_does_not_excuse_it`
 - A third of a wind-up still reaches a ball across the table. — `rules::tests::a_third_of_a_wind_up_still_reaches_a_ball`
 - Holding half as long carries the ball half as far. — `shot::struck_tests::the_wind_up_maps_to_distance_and_not_to_speed`
 - The break is from behind the head string, and a scratch is not. — `rules::tests::the_break_is_from_behind_the_head_string`

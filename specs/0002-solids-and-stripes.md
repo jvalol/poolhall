@@ -14,8 +14,13 @@ It is not a rule. Eight ball's groups, taking solids or stripes and clearing
 yours before the eight, are an ordering, and spec 0001 took the ordering out on
 purpose. Jake looked at putting one back and said it was too much for this.
 
-So the stripes are what a ball looks like and nothing else. Any ball may still be
-hit first and any may be potted, and the run still ends when the table is clear.
+So the stripes are what a ball looks like and nothing else. Any ball may be
+potted in any order, and the run still ends when the table is clear.
+
+One piece of the ordering came back later: the eight may not be hit first until
+it is the only ball left, per spec 0001. That is a rule about the eight and not
+about groups, and it needs none of this spec: the eight is black whether or not
+anything is striped.
 A practice table is a table you can practise on, not a table that marks you.
 
 ## Behavior

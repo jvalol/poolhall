@@ -6,7 +6,7 @@ use blitzkit::physics::{step, Body};
 use glam::{Quat, Vec3};
 
 use crate::shot::{self, ball};
-use crate::table::{self, BALLS};
+use crate::table::{self, BALLS, EIGHT};
 
 /// The cue ball is body zero and the nine numbered balls follow it, so a ball's
 /// number is its index and nothing has to be searched for.
@@ -43,11 +43,19 @@ pub enum Foul {
     Scratched,
     /// Nothing reached a cushion after the balls met.
     NoRail,
+    /// Struck the eight first while anything else was still up.
+    EightFirst,
 }
 
 /// What the shot now rolling has done so far.
 #[derive(Debug, Clone, Default)]
 struct Happenings {
+    /// Whether the eight was the only ball left when this shot was taken.
+    ///
+    /// Taken at the shot and not at the end of it, because potting the last
+    /// other ball in the same shot does not make the eight legal to have hit
+    /// first. What matters is what was on the table when you struck it.
+    eight_alone: bool,
     first_hit: Option<usize>,
     reached_a_rail: bool,
     potted: Vec<usize>,
@@ -119,6 +127,14 @@ impl Run {
 
     pub fn cue(&self) -> Vec3 {
         self.bodies[CUE].position
+    }
+
+    /// Whether the eight is the only numbered ball still up.
+    ///
+    /// Which is when it stops being the ball you must not touch and becomes
+    /// the ball you have to.
+    pub fn only_the_eight_is_up(&self) -> bool {
+        (1..=BALLS).all(|ball| ball == EIGHT || self.down[ball])
     }
 
     /// Whether the cue ball could be put down here: on the table, and not
@@ -201,7 +217,10 @@ impl Run {
         self.shots += 1;
         self.phase = Phase::Rolling;
         self.rolled = 0;
-        self.doing = Happenings::default();
+        self.doing = Happenings {
+            eight_alone: self.only_the_eight_is_up(),
+            ..Happenings::default()
+        };
         self.in_hand = false;
     }
 
@@ -366,6 +385,7 @@ impl Run {
         } else {
             match self.doing.first_hit {
                 None => Some(Foul::Missed),
+                Some(EIGHT) if !self.doing.eight_alone => Some(Foul::EightFirst),
                 Some(_) if !self.doing.reached_a_rail && potted.is_empty() => Some(Foul::NoRail),
                 _ => None,
             }
@@ -500,6 +520,78 @@ mod tests {
             "a full break was called no rail"
         );
         assert!(!run.in_hand, "a full break put the cue ball back in hand");
+    }
+
+    /// Spec 0001: hitting the eight first is a foul, until it is all there is.
+    #[test]
+    fn hitting_the_eight_first_is_a_foul() {
+        let mut run = only(&[1, EIGHT]);
+        // the eight square in front of the cue ball, the one off to the side
+        run.bodies[EIGHT].position = vec3(0.0, table::BALL_RADIUS, 0.0);
+        run.bodies[1].position = vec3(0.0, table::BALL_RADIUS, 8.0);
+        run.place(vec3(-16.0, table::BALL_RADIUS, 0.0));
+
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert_eq!(
+            run.last,
+            Some(Outcome::Foul(Foul::EightFirst)),
+            "hitting the eight first was allowed"
+        );
+        assert!(run.in_hand, "the foul did not give the ball back");
+    }
+
+    /// Spec 0001: and once it is the only ball up it is the ball to hit.
+    #[test]
+    fn the_eight_alone_is_the_ball_to_hit() {
+        let mut run = only(&[EIGHT]);
+        run.bodies[EIGHT].position = vec3(0.0, table::BALL_RADIUS, 0.0);
+        run.place(vec3(-16.0, table::BALL_RADIUS, 0.0));
+        assert!(run.only_the_eight_is_up(), "something else is still up");
+
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+        settle(&mut run);
+
+        assert_ne!(
+            run.last,
+            Some(Outcome::Foul(Foul::EightFirst)),
+            "the eight was refused when it was the only ball left"
+        );
+    }
+
+    /// Spec 0001: and potting the last other ball during the same shot does
+    /// not excuse it. What counts is the table you struck the eight from.
+    ///
+    /// Asked of the record rather than staged as a trick shot: lining up a
+    /// cue ball, the eight and a pocketable one took longer to arrange than
+    /// the rule took to write, and a shot that misses proves nothing either
+    /// way. What this needs to know is when the question is asked.
+    #[test]
+    fn clearing_up_during_the_same_shot_does_not_excuse_it() {
+        let mut run = only(&[1, EIGHT]);
+        run.bodies[EIGHT].position = vec3(0.0, table::BALL_RADIUS, 0.0);
+        run.bodies[1].position = vec3(0.0, table::BALL_RADIUS, 8.0);
+        run.place(vec3(-16.0, table::BALL_RADIUS, 0.0));
+
+        run.shoot(Vec3::X, shot::HARDEST, glam::vec2(0.0, 0.0));
+        assert!(
+            !run.doing.eight_alone,
+            "the eight was alone with the one still up"
+        );
+
+        // the one goes down while the shot is still rolling, which is the case
+        // this is about
+        run.down[1] = true;
+        assert!(run.only_the_eight_is_up(), "the one is still up");
+
+        settle(&mut run);
+
+        assert_eq!(
+            run.last,
+            Some(Outcome::Foul(Foul::EightFirst)),
+            "clearing the table during the shot excused hitting the eight first"
+        );
     }
 
     /// Spec 0001: a soft shot still reaches a ball across the table.

@@ -379,6 +379,7 @@ fn said(why: Foul) -> &'static str {
         Foul::Missed => "foul: you hit nothing",
         Foul::Scratched => "foul: the cue ball went down",
         Foul::NoRail => "foul: nothing reached a cushion",
+        Foul::EightFirst => "foul: you hit the eight first",
     }
 }
 

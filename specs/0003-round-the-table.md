@@ -42,8 +42,15 @@ beads lie on the cloth and are at their clearest from above. The real reason is
 the arithmetic: the eye looks along the up axis from directly over the table, and
 a view matrix built from two parallel vectors is nothing at all.
 
-**You start behind the head rail and well up**, which is where you break from and
-the view that shows the whole table.
+**You start behind the head rail, round to one side, and low**, which is where
+you break from and the view that shows the table as a shape.
+
+Square behind the rail at fifty four degrees up is the view that tells you
+least. The table is a corridor, every ball lines up with every other, and
+nothing about the lie reads. A third of a radian round from square and nearer
+the cloth, it is a table with balls spread across it. The three numbers were
+matched by eye against a view Jake found by playing, which is the only way
+anyone was going to find them.
 
 It did not show the whole table. The starting distance was close enough that the
 near end ran off the bottom of the window while a third of the frame above it
@@ -120,7 +127,7 @@ knows about the walk.
 
 ## Acceptance criteria
 
-- It starts behind the head rail and above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_above_the_cloth`
+- It starts behind the head rail, off to one side, above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_off_to_one_side`
 - D walks you to your right and A to your left. — `view::tests::d_walks_you_to_your_right`
 - Walking across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
 - The keys walk you and the mouse is left for the shot. — `poolhall_game::tests::the_keys_walk_and_the_mouse_is_for_the_shot`

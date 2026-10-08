@@ -61,9 +61,17 @@ const LINE: Vec4 = vec4(0.72, 0.78, 0.74, 1.0);
 
 /// What each numbered ball is painted, one through fifteen.
 ///
-/// Seven hues, the eight in black, and the same seven again paler for the
-/// stripes. The engine can texture a sphere, which is how marble wears its
-/// checker, so real stripes are a change this can take later.
+/// Seven hues and the eight in black, then the same seven again paler.
+///
+/// Only the first eight are what you see. A striped ball is white with a band
+/// of its partner's full hue and a number over each pole, all of it in a
+/// texture, so it reads `PAINT` at the first seven and never at its own entry.
+///
+/// The pale seven are what a ball is drawn in before it has a texture, through
+/// the arm of `face` that finds none. Nothing in a running game takes that
+/// arm, because `load` makes one per ball; the tests do, because they draw
+/// without loading. This said they were how stripes were drawn, which was
+/// true when a stripe was a flat colour and has not been since.
 const PAINT: [Vec4; BALLS] = [
     vec4(0.95, 0.80, 0.15, 1.0),
     vec4(0.15, 0.32, 0.80, 1.0),

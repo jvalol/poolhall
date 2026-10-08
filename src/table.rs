@@ -21,7 +21,7 @@ pub const POCKET_MOUTH: f32 = 1.6;
 
 /// How thick the cushions are, and how high.
 const RAIL_THICK: f32 = 1.0;
-const RAIL_HIGH: f32 = 1.4;
+pub const RAIL_HIGH: f32 = 1.4;
 
 /// How wide a gap each pocket leaves between cushions.
 const RAIL_GAP: f32 = 2.4;

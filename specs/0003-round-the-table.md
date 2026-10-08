@@ -70,6 +70,22 @@ else to go once the drag was gone, and it is half of where you are.
 Everything the keys do is a rate a second and not a step a press, because a key
 that moves the eye a fixed amount per press is a key you hammer.
 
+D walks you to your right and A to your left, which is the opposite sign to the
+drag this replaced: dragging right turns the world right, which walks you left,
+while pressing D means move me right. One sign served both and sent the keys
+the wrong way round. Nothing caught it, because every other test of walking
+asks only that the eye moved and stayed the same distance out, which a wrong
+sign passes perfectly.
+
+**And the eye stays out of the table.** It is `back` out and `above` up, and
+neither of those knows where the table is. Leaning right in at the flattest
+angle put it a unit and a quarter up against cushions a unit and a half high,
+and sliding the view up the table carried it in over the cloth: the camera
+ended up among the balls looking out through the baize. When it would be inside
+it is raised until it clears the cushions, rather than pushed back out, because
+leaning in is the thing that was asked for and standing up is the cheaper one
+to take away.
+
 **And it slides across, with shift held.** Walking round and leaning in are two
 of the three things a person wants from a camera. The third is to put a
 particular corner in the middle of the window, and without it the eye orbited
@@ -99,6 +115,8 @@ knows about the walk.
 ## Acceptance criteria
 
 - It starts behind the head rail and above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_above_the_cloth`
+- D walks you to your right and A to your left. — `view::tests::d_walks_you_to_your_right`
+- The eye is never left inside the table. — `view::tests::the_eye_stays_out_of_the_table`
 - Walking across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
 - The keys walk you and the mouse is left for the shot. — `poolhall_game::tests::the_keys_walk_and_the_mouse_is_for_the_shot`
 - The arrows slide what you are looking at, and leave the cue tip alone. — `poolhall_game::tests::the_arrows_slide_what_you_are_looking_at`

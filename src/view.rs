@@ -55,6 +55,9 @@ pub const BACK_PER_SECOND: f32 = 0.9;
 pub const PAN_PER_SECOND: f32 = 0.55;
 pub const RISE_PER_SECOND: f32 = 0.9;
 
+/// How far over the cushions the eye is kept while it is over the table.
+pub const CLEARS: f32 = 0.7;
+
 /// How far off the middle of the table the eye may look, in table halves.
 ///
 /// Panning with nothing to stop it is a camera lost in the black with no way
@@ -112,7 +115,11 @@ impl View {
     /// a drag, so these are rates a second rather than a step a press: a key
     /// that moves the eye a fixed amount per press is a key you hammer.
     pub fn walked(&mut self, round: f32, inout: f32, dt: f32) {
-        self.about -= round * TURN_PER_SECOND * dt;
+        // plus, not minus. A drag and a key want opposite signs and this had
+        // the drag's: dragging right turns the world right, which walks you
+        // left, while pressing D means move me right. Reusing one sign for
+        // both sent A and D the wrong way round.
+        self.about += round * TURN_PER_SECOND * dt;
         self.back = (self.back * (1.0 - inout * BACK_PER_SECOND * dt)).clamp(CLOSEST, FURTHEST);
     }
 
@@ -137,6 +144,30 @@ impl View {
         self.at.x = self.at.x.clamp(-half.x * ROAM, half.x * ROAM);
         self.at.z = self.at.z.clamp(-half.y * ROAM, half.y * ROAM);
         self.at.y = 0.0;
+    }
+
+    /// Lifts the eye over the cushions when it would otherwise be inside the
+    /// table.
+    ///
+    /// The eye is `back` out and `above` up, and neither of those knows where
+    /// the table is. Leaning right in at the lowest angle put it a unit and a
+    /// quarter up against cushions a unit and a half high, and sliding the
+    /// view up the table carried it in over the cloth: the camera ended up
+    /// among the balls looking out through the baize.
+    ///
+    /// Raising the eye rather than pushing it out, because leaning in is what
+    /// was asked for and standing up is the cheaper thing to take away.
+    pub fn keep_out(&mut self, over: Vec2, rail: f32) {
+        let eye = self.eye();
+        let clear = rail + CLEARS;
+        if eye.y >= clear || eye.x.abs() > over.x || eye.z.abs() > over.y {
+            return;
+        }
+
+        self.above = (clear / self.back)
+            .clamp(-1.0, 1.0)
+            .asin()
+            .clamp(LOWEST, HIGHEST);
     }
 
     /// Where the eye is.
@@ -248,6 +279,48 @@ mod tests {
         assert!(
             (now.y - was.y).abs() < 1e-3,
             "walking round changed the height"
+        );
+    }
+
+    /// Spec 0003: D walks you to your right and A to your left.
+    ///
+    /// The one nothing caught. Every other test of walking asks only that the
+    /// eye moved and stayed the same distance out, which a wrong sign passes
+    /// perfectly.
+    #[test]
+    fn d_walks_you_to_your_right() {
+        let mut view = View::new();
+        let was = view.eye();
+        // from the head rail the eye looks along +x, so its right hand is +z
+        assert!(was.x < 0.0 && was.z.abs() < 1e-3, "{:?}", was);
+
+        view.walked(1.0, 0.0, 0.2);
+        assert!(view.eye().z > was.z, "D walked left: {:?}", view.eye());
+
+        let mut other = View::new();
+        other.walked(-1.0, 0.0, 0.2);
+        assert!(other.eye().z < was.z, "A walked right: {:?}", other.eye());
+    }
+
+    /// Spec 0003: and the eye never ends up inside the table.
+    #[test]
+    fn the_eye_stays_out_of_the_table() {
+        let over = glam::vec2(28.0, 17.0);
+        let mut view = View::new();
+        view.back = CLOSEST;
+        view.above = LOWEST;
+
+        // leaning right in at the flattest angle puts it under the cushions,
+        // over the cloth, which is the camera among the balls
+        assert!(view.eye().y < 1.4, "the test is not testing anything");
+
+        view.keep_out(over, 1.4);
+        let eye = view.eye();
+
+        assert!(
+            eye.y >= 1.4 || eye.x.abs() > over.x || eye.z.abs() > over.y,
+            "the eye is inside the table at {:?}",
+            eye
         );
     }
 

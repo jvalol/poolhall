@@ -57,10 +57,31 @@ The cursor ray meets the cloth's plane wherever it is pointed and that plane goe
 on for ever, so the first version let the cue ball be put down in the dark past
 the rails.
 
-**Putting the cue ball down is what ends being in hand.** One click places it,
-and the next press and hold is a shot. Without that every click put the ball
-somewhere again and nothing ever got as far as shooting, which is how it shipped
-the first time.
+**Letting go of the cue ball is what ends being in hand**, and the next press
+and hold is a shot. Without something ending it, every click put the ball
+somewhere again and nothing ever got as far as shooting, which is how it
+shipped the first time.
+
+**There is a cue, and it draws back rather than swinging.** A tapered shaft
+with its tip at the point the shot is struck from, which is where `tip` already
+says the cue comes from, so the stick follows the spin as well as the aim: put
+the tip low and the cue drops with it.
+
+What a player watches while winding up is the gap behind the ball, and a cue
+that stays put while a number climbs says nothing at all. So the whole stick
+slides back with the power and the shot is taken from wherever it got to.
+
+The butt is lifted about nine degrees, which is steeper than a real cue is
+held. A level one lies through the cushion and out the far side of the table;
+this clears a rail by the time it reaches one, which is what a bridge hand is
+doing anyway.
+
+It is built and not loaded, like the balls' paint and the band: a cue is a
+surface of revolution and the engine makes those from a function.
+
+Neither the cue nor the beads are drawn while the ball is in hand. There is no
+shot to show the line of until it is down, and both hung off a ball being
+carried about.
 
 **A cursor on top of the cue ball points nowhere**, and the shot keeps the
 direction it had. The direction from a ball to itself is nothing at all, and

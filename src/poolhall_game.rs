@@ -48,6 +48,10 @@ const POCKET: Vec4 = vec4(0.03, 0.04, 0.05, 1.0);
 const CUE_BALL: Vec4 = vec4(0.97, 0.96, 0.92, 1.0);
 const AIM: Vec4 = vec4(1.0, 0.95, 0.75, 1.0);
 
+/// The cue's shaft, and the chalk on its tip.
+const WOOD: Vec4 = vec4(0.72, 0.54, 0.32, 1.0);
+const CHALK: Vec4 = vec4(0.26, 0.42, 0.52, 1.0);
+
 /// The head string, drawn while the break is being placed.
 ///
 /// Chalk on baize rather than paint: a real table marks it with two diamonds
@@ -109,6 +113,8 @@ pub struct PoolhallGame {
     sliding: bool,
     sphere: Option<MeshId>,
     block: Option<MeshId>,
+    /// The cue, a tapered shaft lying along +x with its tip at the origin.
+    cue_stick: Option<MeshId>,
     /// One band per striped ball, in ball order from nine upwards.
     /// One per ball, in order, each carrying that ball's colour and number.
     faces: Vec<TextureId>,
@@ -145,6 +151,7 @@ impl PoolhallGame {
             sliding: false,
             sphere: None,
             block: None,
+            cue_stick: None,
             faces: Vec::new(),
             quitting: false,
             staged: crate::staged(),
@@ -291,6 +298,56 @@ impl PoolhallGame {
     }
 }
 
+/// How long the cue is, how thick at each end, and how round it is.
+///
+/// In balls, like everything else here. A real cue is about two and a half
+/// times a ball's diameter short of a table's length, and its tip is a quarter
+/// of a ball across against a butt nearer two thirds.
+const CUE_LONG: f32 = 24.0;
+const CUE_TIP: f32 = 0.16;
+const CUE_BUTT: f32 = 0.38;
+const CUE_ROUND: u32 = 12;
+
+/// How much of the way to the eye the cue may reach, and the shortest it is
+/// allowed to get.
+///
+/// Three quarters, so there is always some daylight between the butt and the
+/// camera. The floor matters because the eye may be right on top of the ball,
+/// and a cue that shrinks to nothing reads as no cue at all.
+const CUE_ROOM: f32 = 0.75;
+const CUE_LEAST: f32 = 5.0;
+
+/// How far the butt is lifted, in radians.
+///
+/// A real cue is held nearly level and this is steeper than that, because a
+/// level one lies through the cushion and out the far side of the table. Nine
+/// degrees puts the shaft over a rail a unit and a half high by the time it
+/// reaches one, which is what a player's bridge hand is doing anyway.
+const CUE_LIFT: f32 = 0.16;
+
+/// How far the tip sits off the ball at rest, and how far back a full shot
+/// draws it.
+///
+/// It is drawn back rather than swung: what a player watches while winding up
+/// is the gap behind the ball, and a cue that stays put while a number climbs
+/// says nothing at all.
+const CUE_GAP: f32 = 0.35;
+const CUE_DRAW: f32 = 4.0;
+
+/// The cue: a tapered shaft lying along +x, tip at the origin.
+///
+/// Built rather than loaded, like the balls' paint. It is a surface of
+/// revolution and the engine makes those from a function, so a cue is six
+/// lines and no file.
+fn cue_mesh() -> MeshData {
+    MeshData::surface(CUE_ROUND, 1, |u, v| {
+        let round = u * std::f32::consts::TAU;
+        let thick = CUE_TIP + (CUE_BUTT - CUE_TIP) * v;
+
+        vec3(v * CUE_LONG, thick * round.cos(), thick * round.sin())
+    })
+}
+
 /// "1 shot" and "2 shots".
 fn shots(taken: u32) -> String {
     if taken == 1 {
@@ -343,6 +400,7 @@ impl Game for PoolhallGame {
     fn load(&mut self, renderer: &mut Renderer) {
         self.sphere = Some(renderer.add_mesh(&MeshData::sphere(24, 16)));
         self.block = Some(renderer.add_mesh(&MeshData::cube()));
+        self.cue_stick = Some(renderer.add_mesh(&cue_mesh()));
 
         // every ball and not only the striped ones, because every ball carries
         // its number and a number is a texture
@@ -522,8 +580,45 @@ impl Game for PoolhallGame {
             CUE_BALL,
         );
 
-        // the shot, drawn as beads along it, as long as it is hard
-        if self.run.phase() == Phase::Aiming {
+        // the cue, behind the ball and drawn back by however hard the shot is
+        // wound up. Not while the ball is in hand: there is nothing to aim at
+        // and the stick would be lying through whatever you are carrying it
+        // past.
+        if let (Phase::Aiming, false, Some(stick)) =
+            (self.run.phase(), self.run.in_hand, self.cue_stick)
+        {
+            let along = self.way();
+            let meets = shot::tip(self.run.cue(), along, self.tip);
+            // back along the shot and up, which is the line the shaft lies on
+            let lies = (-along * CUE_LIFT.cos() + Vec3::Y * CUE_LIFT.sin()).normalize_or_zero();
+            let back = CUE_GAP + self.power / HARDEST * CUE_DRAW;
+            let at = meets + lies * back;
+
+            // only as long as there is room for. A cue is longer than the eye
+            // is far from the ball once you have leaned in, so a full one runs
+            // back through the camera and all you see is the butt of it
+            // floating beyond your own head.
+            let room = (self.view.eye() - at).length() * CUE_ROOM;
+            let long = room.clamp(CUE_LEAST, CUE_LONG);
+
+            scene.push_colored(
+                stick,
+                &Transform::at(at)
+                    .with_rotation(glam::Quat::from_rotation_arc(Vec3::X, lies))
+                    .with_scale(vec3(long / CUE_LONG, 1.0, 1.0)),
+                WOOD,
+            );
+            scene.push_colored(
+                sphere,
+                &Transform::at(at).with_scale(Vec3::splat(CUE_TIP * 2.0)),
+                CHALK,
+            );
+        }
+
+        // the shot, drawn as beads along it, as long as it is hard. Not in
+        // hand either: there is no shot to show the line of until the ball is
+        // down, and the beads hung off it while it was being carried.
+        if self.run.phase() == Phase::Aiming && !self.run.in_hand {
             let along = self.way();
             let far = 2.0 + self.power / HARDEST * 8.0;
 

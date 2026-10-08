@@ -378,15 +378,6 @@ impl Game for PoolhallGame {
             self.view.walked(round, inout, dt);
         }
 
-        // and wherever the keys left it, the eye stays out of the table
-        self.view.keep_out(
-            glam::vec2(
-                table::HALF_LONG + table::APRON,
-                table::HALF_WIDE + table::APRON,
-            ),
-            table::RAIL_HIGH,
-        );
-
         let across = (self.nudging[3] as i32 - self.nudging[2] as i32) as f32;
         let up = (self.nudging[0] as i32 - self.nudging[1] as i32) as f32;
 

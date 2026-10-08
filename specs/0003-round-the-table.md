@@ -77,14 +77,20 @@ the wrong way round. Nothing caught it, because every other test of walking
 asks only that the eye moved and stayed the same distance out, which a wrong
 sign passes perfectly.
 
-**And the eye stays out of the table.** It is `back` out and `above` up, and
-neither of those knows where the table is. Leaning right in at the flattest
-angle put it a unit and a quarter up against cushions a unit and a half high,
-and sliding the view up the table carried it in over the cloth: the camera
-ended up among the balls looking out through the baize. When it would be inside
-it is raised until it clears the cushions, rather than pushed back out, because
-leaning in is the thing that was asked for and standing up is the cheaper one
-to take away.
+**The eye may go inside the table, and that is not a fault.** It is `back` out
+and `above` up, and neither of those knows where the table is, so leaning right
+in at the flattest angle puts it below the cushions and sliding the view up the
+table carries it in over the cloth.
+
+That was read as a bug and fixed, by raising the eye until it cleared the
+cushions. Played rather than reasoned about, it is better the other way: down
+among the balls at cloth height is the view a player actually takes to read a
+thin cut, and the cushions passing through the frame are no worse than the rail
+you would really be looking over. The fix was taken out again.
+
+What is left is the rule that a view along the cloth never meets it, which is
+what `LOWEST` is for and is a different thing: that one is arithmetic and this
+one was taste.
 
 **And it slides across, with shift held.** Walking round and leaning in are two
 of the three things a person wants from a camera. The third is to put a
@@ -116,7 +122,6 @@ knows about the walk.
 
 - It starts behind the head rail and above the cloth. — `view::tests::it_starts_behind_the_head_rail_and_above_the_cloth`
 - D walks you to your right and A to your left. — `view::tests::d_walks_you_to_your_right`
-- The eye is never left inside the table. — `view::tests::the_eye_stays_out_of_the_table`
 - Walking across walks round rather than towards. — `view::tests::dragging_walks_round_the_table`
 - The keys walk you and the mouse is left for the shot. — `poolhall_game::tests::the_keys_walk_and_the_mouse_is_for_the_shot`
 - The arrows slide what you are looking at, and leave the cue tip alone. — `poolhall_game::tests::the_arrows_slide_what_you_are_looking_at`

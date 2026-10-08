@@ -55,9 +55,6 @@ pub const BACK_PER_SECOND: f32 = 0.9;
 pub const PAN_PER_SECOND: f32 = 0.55;
 pub const RISE_PER_SECOND: f32 = 0.9;
 
-/// How far over the cushions the eye is kept while it is over the table.
-pub const CLEARS: f32 = 0.7;
-
 /// How far off the middle of the table the eye may look, in table halves.
 ///
 /// Panning with nothing to stop it is a camera lost in the black with no way
@@ -144,30 +141,6 @@ impl View {
         self.at.x = self.at.x.clamp(-half.x * ROAM, half.x * ROAM);
         self.at.z = self.at.z.clamp(-half.y * ROAM, half.y * ROAM);
         self.at.y = 0.0;
-    }
-
-    /// Lifts the eye over the cushions when it would otherwise be inside the
-    /// table.
-    ///
-    /// The eye is `back` out and `above` up, and neither of those knows where
-    /// the table is. Leaning right in at the lowest angle put it a unit and a
-    /// quarter up against cushions a unit and a half high, and sliding the
-    /// view up the table carried it in over the cloth: the camera ended up
-    /// among the balls looking out through the baize.
-    ///
-    /// Raising the eye rather than pushing it out, because leaning in is what
-    /// was asked for and standing up is the cheaper thing to take away.
-    pub fn keep_out(&mut self, over: Vec2, rail: f32) {
-        let eye = self.eye();
-        let clear = rail + CLEARS;
-        if eye.y >= clear || eye.x.abs() > over.x || eye.z.abs() > over.y {
-            return;
-        }
-
-        self.above = (clear / self.back)
-            .clamp(-1.0, 1.0)
-            .asin()
-            .clamp(LOWEST, HIGHEST);
     }
 
     /// Where the eye is.
@@ -300,28 +273,6 @@ mod tests {
         let mut other = View::new();
         other.walked(-1.0, 0.0, 0.2);
         assert!(other.eye().z < was.z, "A walked right: {:?}", other.eye());
-    }
-
-    /// Spec 0003: and the eye never ends up inside the table.
-    #[test]
-    fn the_eye_stays_out_of_the_table() {
-        let over = glam::vec2(28.0, 17.0);
-        let mut view = View::new();
-        view.back = CLOSEST;
-        view.above = LOWEST;
-
-        // leaning right in at the flattest angle puts it under the cushions,
-        // over the cloth, which is the camera among the balls
-        assert!(view.eye().y < 1.4, "the test is not testing anything");
-
-        view.keep_out(over, 1.4);
-        let eye = view.eye();
-
-        assert!(
-            eye.y >= 1.4 || eye.x.abs() > over.x || eye.z.abs() > over.y,
-            "the eye is inside the table at {:?}",
-            eye
-        );
     }
 
     #[test]

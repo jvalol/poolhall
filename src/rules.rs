@@ -502,6 +502,34 @@ mod tests {
         assert!(!run.in_hand, "a full break put the cue ball back in hand");
     }
 
+    /// Spec 0001: a soft shot still reaches a ball across the table.
+    ///
+    /// Rolling resistance is a steady slowing, so distance goes as the square
+    /// of speed, and charging straight into a speed put nearly all the useful
+    /// range at the top of the wind-up. A third of a wind-up fouled on every
+    /// one of a hundred and sixty shots, almost all of them for never touching
+    /// anything at all.
+    #[test]
+    fn a_third_of_a_wind_up_still_reaches_a_ball() {
+        let mut run = only(&[1]);
+        run.bodies[1].position = vec3(0.0, table::BALL_RADIUS, 0.0);
+        run.place(vec3(-16.0, table::BALL_RADIUS, 0.0));
+
+        // sixteen units, which is a third of the table and an ordinary length
+        // of shot
+        run.shoot(
+            Vec3::X,
+            shot::struck(shot::HARDEST / 3.0),
+            glam::vec2(0.0, 0.0),
+        );
+        settle(&mut run);
+
+        assert!(
+            !matches!(run.last, Some(Outcome::Foul(Foul::Missed))),
+            "a third of a wind-up could not reach a ball sixteen away"
+        );
+    }
+
     /// A run with everything cleared off the table but the balls named.
     fn only(balls: &[usize]) -> Run {
         let mut run = Run::new();

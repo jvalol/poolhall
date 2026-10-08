@@ -695,7 +695,8 @@ impl Game for PoolhallGame {
 
         if self.charging {
             self.charging = false;
-            self.run.shoot(self.way(), self.power, self.tip);
+            self.run
+                .shoot(self.way(), shot::struck(self.power), self.tip);
             self.power = 0.0;
         }
     }

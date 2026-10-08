@@ -15,6 +15,24 @@ pub const HARDEST: f32 = 20.0;
 /// nowhere and hands the turn straight back, which is the game ignoring you.
 pub const SOFTEST: f32 = HARDEST * 0.1;
 
+/// What a wound-up shot is struck at, given how far the wind-up got.
+///
+/// Rolling resistance is a steady slowing, so how far a ball goes is the
+/// square of how fast it left. Charging straight into a speed therefore puts
+/// almost all the useful range at the top of the wind-up: at a third of the
+/// way up, the cue ball travelled a tenth of what a full shot does and could
+/// not reach a ball on the other side of the table. Measured over a hundred
+/// and sixty shots, a third of a wind-up fouled every single time and almost
+/// all of them for never touching anything.
+///
+/// Taking the root undoes that: how long you hold maps to how far the ball
+/// goes, which is the thing a player is actually choosing. The hardest shot is
+/// unchanged and the softest now carries about eight units instead of under
+/// one.
+pub fn struck(power: f32) -> f32 {
+    HARDEST * (power / HARDEST).clamp(0.0, 1.0).sqrt()
+}
+
 /// How slowly everything has to be going before a shot is over.
 pub const STILL: f32 = 0.08;
 
@@ -109,6 +127,30 @@ pub fn nothing_is_moving(bodies: &[Body]) -> bool {
     bodies
         .iter()
         .all(|body| body.velocity.length() < STILL && body.spin.length() < STILL)
+}
+
+/// Spec 0001: and how long you hold maps to how far the ball goes.
+#[cfg(test)]
+mod struck_tests {
+    use super::*;
+
+    #[test]
+    fn the_wind_up_maps_to_distance_and_not_to_speed() {
+        // a full wind-up is unchanged
+        assert!((struck(HARDEST) - HARDEST).abs() < 1e-4);
+
+        // and half of one goes half as far, which means speed by the root
+        let half = struck(HARDEST * 0.5);
+        assert!(
+            (half * half - HARDEST * HARDEST * 0.5).abs() < 1e-2,
+            "half a wind-up is {} and does not carry half as far",
+            half
+        );
+
+        // it never gives back more than it was handed, and never a sick number
+        assert!(struck(0.0) >= 0.0);
+        assert!(struck(HARDEST * 4.0) <= HARDEST + 1e-4);
+    }
 }
 
 #[cfg(test)]

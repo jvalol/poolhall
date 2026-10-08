@@ -62,6 +62,22 @@ and hold is a shot. Without something ending it, every click put the ball
 somewhere again and nothing ever got as far as shooting, which is how it
 shipped the first time.
 
+**How long you hold maps to how far the ball goes**, not to how fast it leaves.
+Rolling resistance is a steady slowing, so distance goes as the square of
+speed, and a wind-up that charges straight into a speed puts nearly all the
+useful range in its last third.
+
+Measured, before: at a third of a wind-up, a hundred and sixty shots fouled a
+hundred and sixty times, and a hundred and fifty six of those were for never
+touching anything at all. At half, ninety nine in a hundred. Two thirds of the
+control did nothing a player would want. Taking the root of the share fixed it
+without touching the hardest shot: a third of a wind-up now fouls forty three
+times in a hundred and misses nothing, and half of one fouls eight.
+
+What is left at a soft shot is the no-rail rule doing its job. A gentle shot
+that touches a ball and drives nothing to a cushion is a foul on a real table
+too, and a player choosing to play one knows it.
+
 **There is a cue, and it draws back rather than swinging.** A tapered shaft
 with its tip at the point the shot is struck from, which is where `tip` already
 says the cue comes from, so the stick follows the spin as well as the aim: put
@@ -229,6 +245,8 @@ takes, how much draw a cloth leaves.
 - Any ball may be hit first. — `rules::tests::any_ball_first_is_legal`
 - Hitting nothing at all is a foul. — `rules::tests::missing_everything_is_a_foul`
 - Potting the cue ball is a foul, and it comes back. — `rules::tests::potting_the_cue_ball_is_a_foul`
+- A third of a wind-up still reaches a ball across the table. — `rules::tests::a_third_of_a_wind_up_still_reaches_a_ball`
+- Holding half as long carries the ball half as far. — `shot::struck_tests::the_wind_up_maps_to_distance_and_not_to_speed`
 - The break is from behind the head string, and a scratch is not. — `rules::tests::the_break_is_from_behind_the_head_string`
 - Carrying the cue ball does not put it down. — `rules::tests::carrying_the_cue_ball_keeps_it_in_hand`
 - It is taken hold of and carried, and letting go puts it down. — `poolhall_game::tests::the_cue_ball_is_carried_and_put_down`

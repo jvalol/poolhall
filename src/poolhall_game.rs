@@ -992,16 +992,25 @@ mod tests {
         assert_eq!(fouls(3), "3 fouls");
     }
 
-    /// How big the picture is.
+    /// How big the picture is, which the engine says and this game has
+    /// no reason to argue with.
     ///
-    /// **Bigger than the engine's 320 by 240** for the reason its spec
-    /// 0062 gives about the size of what is being watched for. A ball
-    /// here is a ball, but what tells one from another is the number on
-    /// it and the band round it, and at that size both are a pixel or
-    /// two. The whole of spec 0002 could come off the balls and the
-    /// comparison would barely move.
-    const WIDE: u32 = 640;
-    const TALL: u32 = 480;
+    /// **It was given twice this and the reason was wrong.** The
+    /// argument was that the number on a ball and the band round it are
+    /// a pixel or two at the engine's size, so spec 0002 could come off
+    /// without the comparison moving. Measured instead of assumed, by
+    /// taking the faces off and asking how far the picture went: 0.3% at
+    /// the engine's size and 0.2% at twice it, against a tolerance of
+    /// 0.2%. The bigger picture is the one that nearly fails to notice.
+    ///
+    /// **And 0.3% is thin**, which is a fault of this shot rather than
+    /// of its size: fifteen balls across a table seen from the baulk end
+    /// is a small part of the frame, so what this guards well is the
+    /// table, the rack's spread and the light, and what it only just
+    /// guards is the faces. A shot from closer in would hold them
+    /// properly and is not what the readme shows.
+    const WIDE: u32 = blitzkit::picture::SIZE.0;
+    const TALL: u32 = blitzkit::picture::SIZE.1;
 
     /// The table after the break, held against the picture of one.
     ///

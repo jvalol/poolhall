@@ -17,5 +17,5 @@ pub fn staged() -> bool {
 }
 
 fn main() {
-    start("poolhall", Box::new(PoolhallGame::new()));
+    start("poolhall", Box::new(PoolhallGame::new(staged())));
 }

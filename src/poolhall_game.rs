@@ -138,12 +138,16 @@ pub struct PoolhallGame {
 
 impl Default for PoolhallGame {
     fn default() -> Self {
-        Self::new()
+        Self::new(false)
     }
 }
 
 impl PoolhallGame {
-    pub fn new() -> Self {
+    /// `staged` rather than a call to `crate::staged()`, so that a picture
+    /// test can ask for the photographed state without putting
+    /// `--screenshot` in its own arguments. `main` passes what the
+    /// arguments say.
+    pub fn new(staged: bool) -> Self {
         Self {
             run: Run::new(),
             pointing: None,
@@ -162,7 +166,7 @@ impl PoolhallGame {
             cue_stick: None,
             faces: Vec::new(),
             quitting: false,
-            staged: crate::staged(),
+            staged,
             broken: false,
         }
     }
@@ -738,7 +742,7 @@ mod tests {
 
     #[test]
     fn the_cursor_points_the_shot() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
 
         let left = aimed(&mut game, vec2(0.2, 0.5));
         let right = aimed(&mut game, vec2(0.8, 0.5));
@@ -750,7 +754,7 @@ mod tests {
 
     #[test]
     fn a_cursor_off_the_window_does_not_move_the_shot() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let was = aimed(&mut game, vec2(0.3, 0.5));
 
         let mut scene = Scene::new();
@@ -762,7 +766,7 @@ mod tests {
 
     #[test]
     fn the_arrow_keys_move_the_tip_and_stay_on_the_ball() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let mut text = TextRenderer::new();
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
@@ -784,7 +788,7 @@ mod tests {
 
     #[test]
     fn space_puts_the_tip_back_in_the_middle() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         game.tip = vec2(0.7, -0.6);
 
         game.process_keyboard(KeyboardInput::new(
@@ -798,7 +802,7 @@ mod tests {
 
     #[test]
     fn in_hand_a_click_places_the_cue_ball_rather_than_shooting() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         assert!(game.run.in_hand, "the break is from hand");
 
         let mut scene = Scene::new();
@@ -822,7 +826,7 @@ mod tests {
     /// click moved the ball.
     #[test]
     fn the_cue_ball_is_carried_and_put_down() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let press = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Pressed);
         let let_go = MouseInput::new(MouseButton::Left, blitzkit::mouse::ButtonState::Released);
 
@@ -852,7 +856,7 @@ mod tests {
 
     #[test]
     fn the_keys_walk_and_the_mouse_is_for_the_shot() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let mut text = TextRenderer::new();
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
@@ -895,7 +899,7 @@ mod tests {
     /// Spec 0003: walking round moves the eye and leaves the table where it is.
     #[test]
     fn walking_moves_the_eye_and_not_the_table() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let mut scene = Scene::new();
         let mut camera = Camera::new();
         let mut text = TextRenderer::new();
@@ -927,7 +931,7 @@ mod tests {
     /// one thing walking round cannot do.
     #[test]
     fn the_arrows_slide_what_you_are_looking_at() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let mut scene = Scene::new();
         let mut camera = Camera::new();
         let mut text = TextRenderer::new();
@@ -950,7 +954,7 @@ mod tests {
 
     #[test]
     fn the_readout_does_not_pile_up() {
-        let mut game = PoolhallGame::new();
+        let mut game = PoolhallGame::new(false);
         let mut text = TextRenderer::new();
         let sound = SoundSystem::new();
         let mut geometry = Geometry::new();
@@ -968,7 +972,7 @@ mod tests {
 
     #[test]
     fn the_readout_lines_are_evenly_spaced() {
-        let game = PoolhallGame::new();
+        let game = PoolhallGame::new(false);
         let lines: Vec<Vec2> = (0..game.readout().len()).map(|n| game.line(n)).collect();
 
         for pair in lines.windows(2) {
@@ -986,5 +990,55 @@ mod tests {
         assert_eq!(fouls(0), "no fouls");
         assert_eq!(fouls(1), "one foul");
         assert_eq!(fouls(3), "3 fouls");
+    }
+
+    /// How big the picture is.
+    ///
+    /// **Bigger than the engine's 320 by 240** for the reason its spec
+    /// 0062 gives about the size of what is being watched for. A ball
+    /// here is a ball, but what tells one from another is the number on
+    /// it and the band round it, and at that size both are a pixel or
+    /// two. The whole of spec 0002 could come off the balls and the
+    /// comparison would barely move.
+    const WIDE: u32 = 640;
+    const TALL: u32 = 480;
+
+    /// The table after the break, held against the picture of one.
+    ///
+    /// **The staging was already here.** `--screenshot` takes the break
+    /// at full power a little off square and lets it settle, which is
+    /// the frame `refresh-screenshots` photographs for the readme: an
+    /// opening rack is a photograph of a table nobody has played on. So
+    /// this is a test of the picture that is already on show.
+    ///
+    /// One `update` and no more, because that is what takes the break:
+    /// the pose runs the shot and settles it on its own clock, and a
+    /// second call would find it already broken and do nothing. The dt
+    /// is nought, so nothing else moves between the staging and the
+    /// shutter.
+    ///
+    /// Nothing at all on a machine with no adapter. The engine's spec
+    /// 0076 writes which picture went unchecked and hands back that it
+    /// skipped.
+    #[test]
+    fn the_table_after_the_break_looks_right() {
+        let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/pictures/after-the-break.png");
+
+        blitzkit::picture::drawn_looks_right(&reference, (WIDE, TALL), |renderer| {
+            let mut game = PoolhallGame::new(true);
+            let mut geometry = Geometry::new();
+            let mut text = TextRenderer::new();
+            let sound = SoundSystem::new();
+            let mut scene = Scene::new();
+            let mut camera = Camera::new();
+
+            game.load(renderer);
+            game.initialize(&mut geometry, &mut text, &sound, (WIDE as f32, TALL as f32));
+            game.update(0.0, &mut geometry, &mut text, &sound);
+            game.draw(&mut scene, &mut camera);
+
+            (scene, camera)
+        });
     }
 }

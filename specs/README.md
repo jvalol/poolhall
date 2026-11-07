@@ -12,7 +12,3 @@ not a priority, and it never changes once a spec exists.
 | [0002](0002-solids-and-stripes.md) | A band round seven of them, and which way round a ball is |
 | [0003](0003-round-the-table.md) | Walking round the table and stooping to it |
 | [0004](0004-a-picture-of-the-table-after-the-break.md) | Holding the staged break against a picture of one, at a size the numbers can be lost at |
-
----
-
-I asked AI to draft this for me. I've edited it. Any surviving AI smells are my oversight.
